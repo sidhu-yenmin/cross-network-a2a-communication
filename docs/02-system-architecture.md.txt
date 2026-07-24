@@ -1,0 +1,548 @@
+# System Architecture
+
+## 1. Overview
+
+The Cross-Network Autonomous Agent-to-Agent (A2A) Communication PoC consists of two independent organizational networks connected through a secure A2A Gateway.
+
+The architecture demonstrates how autonomous AI agents can collaborate without sharing internal applications, databases, or infrastructure.
+
+The two organizations maintain complete ownership of their systems:
+
+- Client Organization
+- Software Development Company
+
+The only communication layer shared between them is the A2A Gateway.
+
+---
+
+# 2. High-Level Architecture
+
+                Cross-Network A2A Communication
+
++------------------------------------------------+
+| Client Organization |
+| |
+| +-------------+ |
+| | Client UI | |
+| +-------------+ |
+| | |
+| v |
+| +-------------+ |
+| | Backend | |
+| +-------------+ |
+| | |
+| v |
+| +-------------+ |
+| | Client | |
+| | Agent | |
+| +-------------+ |
+| | |
+| | A2A Message |
++----------|-------------------------------------+
+|
+|
+v
+
++------------------------------------------------+
+| A2A Gateway |
+| |
+| - Authentication |
+| - Agent Registration |
+| - Message Routing |
+| - Validation |
+| - Logging |
+| |
++------------------------------------------------+
+|
+|
+v
+
++------------------------------------------------+
+| Software Company Organization |
+| |
+| +----------------+ |
+| | Manager UI | |
+| +----------------+ |
+| | |
+| v |
+| +----------------+ |
+| | Backend | |
+| +----------------+ |
+| | |
+| v |
+| +----------------+ |
+| | Project | |
+| | Manager Agent | |
+| +----------------+ |
+| | |
+| | |
+| +-------+--------+ |
+| | | | |
+| v v v |
+| BA Technical Cost |
+| Agent Agent Agent |
+| |
+| Timeline Agent |
+| Risk Agent |
+| |
++------------------------------------------------+
+
+
+---
+
+# 3. Architectural Principles
+
+## 3.1 Network Independence
+
+Each organization operates independently.
+
+Client Organization owns:
+
+- Client application
+- Client database
+- Client authentication
+- Client Agent
+
+
+Software Company owns:
+
+- Manager application
+- Company database
+- Company authentication
+- Company Agents
+
+
+No organization directly accesses another organization's internal resources.
+
+---
+
+# 3.2 A2A Communication Boundary
+
+All agent communication must pass through the A2A Gateway.
+
+Correct:
+
+
+Client Agent
+
+  |
+
+  v
+
+A2A Gateway
+
+  |
+
+  v
+
+Project Manager Agent
+
+
+Incorrect:
+
+
+Client Agent
+
+  |
+
+Direct API Call
+
+  |
+
+Company Agent
+
+
+---
+
+# 4. Major Components
+
+The system contains four primary layers.
+
+---
+
+# Layer 1: Client Network
+
+Responsible for client-side interaction.
+
+Components:
+
+
+Client Portal
+
+  |
+
+Client Backend
+
+  |
+
+Client Agent
+
+  |
+
+Client Database
+
+
+Responsibilities:
+
+- User authentication
+- Project request creation
+- Requirement submission
+- Clarification responses
+- Proposal review
+
+---
+
+# Layer 2: A2A Gateway
+
+The communication bridge between organizations.
+
+Responsibilities:
+
+## Agent Registration
+
+Maintains registered agents:
+
+Example:
+
+
+client-agent
+
+pm-agent
+
+technical-agent
+
+cost-agent
+
+
+---
+
+## Authentication
+
+Validates communication requests.
+
+Example:
+
+
+JWT Token
+
+Agent Identity
+
+Organization Identity
+
+
+---
+
+## Message Routing
+
+Routes messages between agents.
+
+Example:
+
+
+PROJECT_REQUEST
+
+Client Agent
+
+  |
+
+Gateway
+
+  |
+
+PM Agent
+
+
+---
+
+## Message Validation
+
+Ensures messages follow the defined contract.
+
+---
+
+## Communication Logging
+
+Stores:
+
+- Sender
+- Receiver
+- Timestamp
+- Message Type
+- Status
+
+---
+
+# Layer 3: Company Network
+
+Responsible for processing project requests.
+
+Components:
+
+
+Manager Portal
+
+  |
+
+Company Backend
+
+  |
+
+Project Manager Agent
+
+  |
+
+Specialist Agents
+
+  |
+
+Company Database
+
+
+---
+
+# Layer 4: Autonomous Agent Layer
+
+Contains AI agents.
+
+Each agent contains:
+
+
+Agent
+
+|
+
+Goal
+
+|
+
+Memory
+
+|
+
+Planner
+
+|
+
+Reasoner
+
+|
+
+Tools
+
+|
+
+Communication
+
+
+---
+
+# 5. Agent Architecture Flow
+
+Example:
+
+
+Project Request
+
+  |
+
+  v
+
+Project Manager Agent
+
+  |
+
+  |
+
+Create Plan
+
+  |
+
+  +----------------+
+
+  |                |
+
+  v                v
+
+Business Analyst Technical Agent
+
+  |
+
+  v
+
+Cost Agent
+
+  |
+
+  v
+
+Timeline Agent
+
+  |
+
+  v
+
+Risk Agent
+
+  |
+
+  v
+
+Proposal Generation
+
+
+---
+
+# 6. Data Flow
+
+## Step 1
+
+Client creates project request.
+
+Example:
+
+
+Build healthcare application
+
+
+---
+
+## Step 2
+
+Client Agent validates:
+
+Checks:
+
+- Missing requirements
+- Required information
+- Business context
+
+---
+
+## Step 3
+
+Client Agent sends A2A message.
+
+
+PROJECT_REQUEST
+
+
+Through:
+
+
+Client Agent
+
+ |
+
+A2A Gateway
+
+ |
+
+PM Agent
+
+
+---
+
+## Step 4
+
+PM Agent plans execution.
+
+Creates tasks:
+
+
+Analyze requirements
+
+Design architecture
+
+Estimate cost
+
+Estimate timeline
+
+Analyze risks
+
+
+---
+
+## Step 5
+
+Specialist agents execute tasks.
+
+Each agent:
+
+- Receives task
+- Uses LLM reasoning
+- Uses tools
+- Stores results
+- Sends response
+
+---
+
+## Step 6
+
+PM Agent generates proposal.
+
+Combines:
+
+
+Requirements
+
+Architecture
+
+Cost
+
+Timeline
+
+Risks
+
+
+---
+
+# 7. Security Model
+
+The PoC uses:
+
+- JWT authentication
+- Agent identity validation
+- Organization isolation
+- Message validation
+
+Security goal:
+
+Ensure only authorized agents can communicate.
+
+---
+
+# 8. Deployment View
+
+For PoC:
+
+
+Docker Compose
+
+Client Service
+
+Company Service
+
+A2A Gateway
+
+Database Services
+
+
+---
+
+# 9. Future Scalability
+
+The architecture can later support:
+
+- Multiple clients
+- Multiple software companies
+- More specialized agents
+- Advanced memory systems
+- Enterprise authentication
+
+---
+
+# Conclusion
+
+The system architecture establishes a secure communication model where autonomous agents from different organizations collaborate through an A2A Gateway.
+
+The architecture keeps organizations independent while enabling intelligent agent-to-agent collaboration powered by LLM reasoning.
