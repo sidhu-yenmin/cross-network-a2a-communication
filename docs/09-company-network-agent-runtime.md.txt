@@ -1,0 +1,607 @@
+# Company Network Agent Runtime
+
+## 1. Overview
+
+This document defines the internal autonomous agent runtime inside the Software Company Organization.
+
+The company network receives project requests from external Client Agents through the A2A Gateway and coordinates multiple specialized AI agents to generate a software project proposal.
+
+The company network contains:
+
+            Software Company Network
+
+
+              Manager Portal
+
+
+                   |
+
+                   v
+
+
+             Company Backend
+
+
+                   |
+
+                   v
+
+
+        Project Manager Agent
+
+
+                   |
+
+    +--------------+--------------+
+
+    |              |              |
+
+    v              v              v
+
+BA Agent Technical Agent Cost Agent
+
+    |              |              |
+
+
+    +--------------+--------------+
+
+                   |
+
+                   v
+
+
+         Timeline Agent
+
+
+                   |
+
+                   v
+
+
+            Risk Agent
+
+---
+
+# 2. Company Agent Runtime Architecture
+
+Each company agent follows the autonomous runtime model:
+
+         Agent Instance
+
+
+              |
+
+              v
+
+
+        Agent Identity
+
+
+              |
+
+              v
+
+
+          Memory
+
+
+              |
+
+              v
+
+
+          Goal
+
+
+              |
+
+              v
+
+
+         Planner
+
+
+              |
+
+              v
+
+
+        LLM Reasoner
+
+
+              |
+
+              v
+
+
+         Tool Registry
+
+
+              |
+
+              v
+
+
+        A2A Communicator
+
+---
+
+# 3. Project Manager Agent
+
+## Agent Identity
+
+
+Agent ID:
+
+pm-agent
+
+Organization:
+
+SoftwareCompany
+
+Role:
+
+Project Orchestrator
+
+
+---
+
+# Goal
+
+Generate a complete software proposal by coordinating specialist AI agents.
+
+---
+
+# Responsibilities
+
+The PM Agent manages:
+
+- Incoming client requests
+- Requirement understanding
+- Task planning
+- Agent delegation
+- Result collection
+- Proposal generation
+- Client communication
+
+---
+
+# Memory
+
+Stores:
+
+
+Current Project Context
+
+Agent Responses
+
+Decision History
+
+Proposal Versions
+
+Client Communication
+
+
+Example:
+
+```json
+{
+ "project":
+ "Healthcare Platform",
+
+ "status":
+ "analysis",
+
+ "completed_tasks":
+ [
+  "BA Analysis"
+ ]
+}
+Planning Logic
+
+Input:
+
+Generate proposal for healthcare platform
+
+
+Planner creates:
+
+Task 1:
+Analyze requirements
+
+
+Task 2:
+Design architecture
+
+
+Task 3:
+Estimate cost
+
+
+Task 4:
+Estimate timeline
+
+
+Task 5:
+Analyze risks
+
+
+Task 6:
+Generate proposal
+
+Tools
+delegate_task()
+
+Purpose:
+
+Send work to specialist agents.
+
+Example:
+
+delegate_task(
+ technical-agent,
+ DESIGN_ARCHITECTURE
+)
+
+collect_results()
+
+Purpose:
+
+Collect completed agent responses.
+
+generate_proposal()
+
+Purpose:
+
+Combine all analysis results.
+
+Execution Flow
+Receive PROJECT_REQUEST
+
+
+        |
+
+        v
+
+
+Understand Goal
+
+
+        |
+
+        v
+
+
+Create Plan
+
+
+        |
+
+        v
+
+
+Delegate Tasks
+
+
+        |
+
+        v
+
+
+Collect Results
+
+
+        |
+
+        v
+
+
+Generate Proposal
+
+
+4. Business Analyst Agent
+Identity
+Agent ID:
+
+ba-agent
+
+
+Role:
+
+Business Analysis Specialist
+
+Goal
+
+Convert business requirements into structured software requirements.
+
+Responsibilities
+Analyze requirements
+Extract features
+Create user stories
+Identify missing information
+Tools
+requirement_extractor()
+
+user_story_generator()
+
+gap_detector()
+
+Input
+
+From PM Agent:
+
+Business Requirement
+
+Output
+
+Example:
+
+{
+ "functional_requirements":
+ [
+  "User registration",
+  "Appointment booking"
+ ],
+
+ "missing_information":
+ [
+  "User roles"
+ ]
+}
+5. Technical Agent
+Identity
+Agent ID:
+
+technical-agent
+
+
+Role:
+
+Solution Architect
+
+Goal
+
+Create the technical solution design.
+
+Responsibilities
+Architecture selection
+Technology recommendation
+Database design
+API strategy
+Tools
+architecture_generator()
+
+technology_selector()
+
+database_recommender()
+
+Output
+
+Example:
+
+{
+ "architecture":
+ "Microservices",
+
+ "backend":
+ "FastAPI",
+
+ "database":
+ "PostgreSQL"
+}
+6. Cost Agent
+Identity
+Agent ID:
+
+cost-agent
+
+
+Role:
+
+Cost Estimation Specialist
+
+Goal
+
+Estimate project development cost.
+
+Responsibilities
+Calculate effort
+Estimate resources
+Calculate infrastructure cost
+Tools
+resource_estimator()
+
+cost_calculator()
+
+Output
+
+Example:
+
+{
+ "team_size":
+ 5,
+
+ "duration":
+ "5 months",
+
+ "estimated_cost":
+ "18 Lakhs"
+}
+7. Timeline Agent
+Identity
+Agent ID:
+
+timeline-agent
+
+
+Role:
+
+Delivery Planner
+
+Goal
+
+Create project schedule.
+
+Responsibilities
+Sprint planning
+Milestone generation
+Delivery estimation
+Tools
+sprint_generator()
+
+timeline_calculator()
+
+Output
+
+Example:
+
+{
+ "timeline":
+ "5 Months",
+
+ "milestones":
+ [
+  "Design",
+  "Development",
+  "Testing"
+ ]
+}
+8. Risk Agent
+Identity
+Agent ID:
+
+risk-agent
+
+
+Role:
+
+Risk Analyst
+
+Goal
+
+Identify and analyze project risks.
+
+Responsibilities
+Technical risks
+Security risks
+Dependency risks
+Delivery risks
+Tools
+risk_detector()
+
+mitigation_generator()
+
+Output
+
+Example:
+
+{
+ "risks":
+ [
+  {
+   "name":
+   "Third party API failure",
+
+   "mitigation":
+   "Backup provider"
+  }
+ ]
+}
+9. Internal Agent Communication
+
+Agents communicate through internal A2A messaging.
+
+Example:
+
+PM requests architecture:
+
+PM Agent
+
+      |
+
+TASK_REQUEST
+
+      |
+
+Technical Agent
+
+
+Technical Agent
+
+      |
+
+TASK_RESPONSE
+
+      |
+
+PM Agent
+
+10. Agent Runtime Execution Loop
+
+Every company agent follows:
+
+Receive Message
+
+
+      |
+
+Read Memory
+
+
+      |
+
+Understand Goal
+
+
+      |
+
+Reason Using LLM
+
+
+      |
+
+Select Tool
+
+
+      |
+
+Execute
+
+
+      |
+
+Store Result
+
+
+      |
+
+Send Response
+
+
+11. Simplified PoC Implementation
+
+The company network should implement:
+
+Required
+Agent classes
+LLM integration
+Memory storage
+Tool registry
+A2A messaging
+REST APIs
+Avoid
+Complex workflow engines
+Enterprise orchestration
+Distributed infrastructure
+12. Demo Execution
+
+During the PoC demonstration:
+
+Client sends project request
+PM Agent receives request
+PM Agent creates plan
+PM delegates tasks
+Specialist agents reason independently
+Tools execute
+Results return
+Proposal generated
