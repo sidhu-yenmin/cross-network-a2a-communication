@@ -1,20 +1,16 @@
 import os
-from pathlib import Path
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 
-# Load .env file located two directories up (project root)
-env_path = Path(__file__).resolve().parents[1] / '.env'
-load_dotenv(dotenv_path=env_path)
-
+# Load .env located in this directory (client-network/backend/.env)
+load_dotenv()
+ 
 # Expect DATABASE_URL in environment, default to a local postgres instance for development
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg://postgres:Yenmin%40123@localhost:5432/company_network"
+SQLALCHEMY_DATABASE_URL = os.environ.get(
+    "DATABASE_URL", "postgresql://postgres:Yenmin%40123@localhost:5432/client_network"
 )
-print("[DEBUG] DATABASE_URL:", SQLALCHEMY_DATABASE_URL)
  
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
