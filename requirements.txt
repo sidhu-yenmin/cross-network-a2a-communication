@@ -1,11 +1,14 @@
 fastapi
 uvicorn
-pydantic
+pydantic[email]
 pydantic-settings
 pyjwt
 httpx
 python-dotenv
 sqlalchemy
+psycopg2-binary
+passlib
+bcrypt
 openai
 langchain
 langgraph

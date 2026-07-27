@@ -16,9 +16,12 @@ import auth
 from database import engine, get_db
 
 # Create database tables
+print("[DEBUG] Starting create_all...")
 models.Base.metadata.create_all(bind=engine)
+print("[DEBUG] Finished create_all.")
 
 app = FastAPI(title="Company Network Backend API")
+print("[DEBUG] FastAPI app initialized.")
 
 # Setup CORS
 app.add_middleware(
@@ -30,7 +33,7 @@ app.add_middleware(
 )
 
 @app.get("/")
-def read_root():
+async def read_root():
     return {"message": "Company Network Backend is running"}
 
 @app.post("/api/auth/signup", response_model=schemas.Token)
