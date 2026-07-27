@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from datetime import datetime
 
 class UserCreate(BaseModel):
     full_name: str
@@ -29,3 +30,30 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+class ProjectCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=150, description="Name of the project")
+    description: str = Field(..., min_length=10, description="Detailed requirements")
+    target_platforms: str = Field(..., min_length=1, description="Platforms like Web, iOS, etc")
+    target_audience: str = Field(..., min_length=1, description="Target user base")
+    expected_timeline: str = Field(..., min_length=1, description="Expected delivery timeline")
+    budget_range: str = Field(..., min_length=1, description="Estimated budget range")
+    key_features: str = Field(..., min_length=5, description="List of must-have features")
+    existing_systems: str = Field(..., min_length=1, description="Existing systems to integrate with")
+
+class ProjectResponse(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    description: str
+    target_platforms: str | None
+    target_audience: str | None
+    expected_timeline: str | None
+    budget_range: str | None
+    key_features: str | None
+    existing_systems: str | None
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

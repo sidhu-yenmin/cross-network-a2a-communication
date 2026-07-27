@@ -10,14 +10,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from database import engine, Base
+import auth
+from routers import gateway
+from database import get_db
 import models
 import schemas
-import auth
-from database import engine, get_db
 
 # Create database tables
 print("[DEBUG] Starting create_all...")
-models.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 print("[DEBUG] Finished create_all.")
 
 app = FastAPI(title="Company Network Backend API")
@@ -31,6 +33,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(gateway.router)
 
 @app.get("/")
 async def read_root():
