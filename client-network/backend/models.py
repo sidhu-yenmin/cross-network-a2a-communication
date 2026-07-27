@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from database import Base
 
 class User(Base):
@@ -9,3 +11,25 @@ class User(Base):
     company_name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+
+    projects = relationship("Project", back_populates="owner")
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    name = Column(String, index=True)
+    description = Column(String)
+    
+    target_platforms = Column(String, nullable=True)
+    target_audience = Column(String, nullable=True)
+    expected_timeline = Column(String, nullable=True)
+    budget_range = Column(String, nullable=True)
+    key_features = Column(String, nullable=True)
+    existing_systems = Column(String, nullable=True)
+
+    status = Column(String, default="SUBMITTED")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    owner = relationship("User", back_populates="projects")
