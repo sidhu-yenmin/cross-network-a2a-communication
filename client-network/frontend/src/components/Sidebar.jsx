@@ -7,9 +7,8 @@ export default function Sidebar() {
   const location = useLocation();
 
   const navItems = [
-    { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-    { path: '/projects', label: 'Active Projects', icon: Briefcase },
-    { path: '/messages', label: 'Messages', icon: MessageSquare },
+    { path: '/projects', label: 'Projects', icon: Briefcase },
+    { path: '/messages', label: 'Chat', icon: MessageSquare },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
 

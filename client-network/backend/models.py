@@ -11,6 +11,7 @@ class User(Base):
     company_name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    mobile_number = Column(String, nullable=True)
 
     projects = relationship("Project", back_populates="owner")
 

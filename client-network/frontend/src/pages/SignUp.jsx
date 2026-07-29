@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Building, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Building, Phone, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
     full_name: '',
     company_name: '',
     email: '',
+    mobile_number: '',
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -81,6 +82,14 @@ export default function SignUp() {
             <div className="input-wrapper">
               <input type="email" name="email" className="form-input" placeholder="name@company.com" onChange={handleChange} required />
               <Mail className="input-icon" size={20} />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Mobile Number</label>
+            <div className="input-wrapper">
+              <input type="tel" name="mobile_number" className="form-input" placeholder="+1 (555) 000-0000" onChange={handleChange} required />
+              <Phone className="input-icon" size={20} />
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional, Dict
 from datetime import datetime
 
 class UserCreate(BaseModel):
@@ -36,6 +37,7 @@ class IncomingProjectResponse(BaseModel):
     key_features: str
     existing_systems: str
     agent_status: str
+    proposal_data: Optional[Dict] = None
     created_at: datetime
 
     class Config:
