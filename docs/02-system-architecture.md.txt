@@ -2,547 +2,840 @@
 
 ## 1. Overview
 
-The Cross-Network Autonomous Agent-to-Agent (A2A) Communication PoC consists of two independent organizational networks connected through a secure A2A Gateway.
+The system consists of two completely independent networks that communicate only through an Agent-to-Agent (A2A) Gateway.
 
-The architecture demonstrates how autonomous AI agents can collaborate without sharing internal applications, databases, or infrastructure.
+The client never communicates directly with the company network.
 
-The two organizations maintain complete ownership of their systems:
-
-- Client Organization
-- Software Development Company
-
-The only communication layer shared between them is the A2A Gateway.
+Instead, every interaction passes through the Client Agent, making the conversation appear as a single chatbot while autonomous agents collaborate behind the scenes.
 
 ---
 
-# 2. High-Level Architecture
+# 2. Overall Architecture
 
-                Cross-Network A2A Communication
+```text
+                            CLIENT NETWORK
++------------------------------------------------------------------+
 
-+------------------------------------------------+
-| Client Organization |
-| |
-| +-------------+ |
-| | Client UI | |
-| +-------------+ |
-| | |
-| v |
-| +-------------+ |
-| | Backend | |
-| +-------------+ |
-| | |
-| v |
-| +-------------+ |
-| | Client | |
-| | Agent | |
-| +-------------+ |
-| | |
-| | A2A Message |
-+----------|-------------------------------------+
-|
-|
-v
+                      Client Web Application
 
-+------------------------------------------------+
-| A2A Gateway |
-| |
-| - Authentication |
-| - Agent Registration |
-| - Message Routing |
-| - Validation |
-| - Logging |
-| |
-+------------------------------------------------+
-|
-|
-v
+                                │
 
-+------------------------------------------------+
-| Software Company Organization |
-| |
-| +----------------+ |
-| | Manager UI | |
-| +----------------+ |
-| | |
-| v |
-| +----------------+ |
-| | Backend | |
-| +----------------+ |
-| | |
-| v |
-| +----------------+ |
-| | Project | |
-| | Manager Agent | |
-| +----------------+ |
-| | |
-| | |
-| +-------+--------+ |
-| | | | |
-| v v v |
-| BA Technical Cost |
-| Agent Agent Agent |
-| |
-| Timeline Agent |
-| Risk Agent |
-| |
-+------------------------------------------------+
+               ┌────────────────┴────────────────┐
+               │                                 │
+               ▼                                 ▼
 
+      Project Requirement Form            Client Chat UI
+
+               │                                 │
+               └────────────────┬────────────────┘
+                                │
+
+                        Client Backend
+
+                                │
+
+                        Client Agent
+
+                                │
+
+                     PostgreSQL Database
+
+                                │
+
+                       Semantic Search
+
+                           (pgvector)
+
+                                │
+
+                           Llama Model
+
+                                │
+
+                         A2A Gateway
+
+==================================================================
+
+                           COMPANY NETWORK
+
+==================================================================
+
+                       Company Backend
+
+                                │
+
+                    Project Manager Agent
+
+                                │
+
+      ┌─────────────┬──────────────┬──────────────┐
+      │             │              │              │
+
+      ▼             ▼              ▼              ▼
+
+ BA Agent    Technical Agent   Cost Agent   Timeline Agent
+
+                                │
+
+                                ▼
+
+                          Risk Agent
+
+                                │
+
+                                ▼
+
+                    Proposal Generation
+
+                                │
+
+                                ▼
+
+                      PostgreSQL Database
+
+                                │
+
+                           pgvector
+
+                                │
+
+                           Llama Model
+```
 
 ---
 
-# 3. Architectural Principles
+# 3. Network Separation
 
-## 3.1 Network Independence
+The architecture intentionally separates both organizations.
 
-Each organization operates independently.
+## Client Network
 
-Client Organization owns:
+Responsible for
 
-- Client application
-- Client database
-- Client authentication
+- User Authentication
+- Project Creation
+- Requirement Form
+- Client Chat
 - Client Agent
+- Project Memory
 
-
-Software Company owns:
-
-- Manager application
-- Company database
-- Company authentication
-- Company Agents
-
-
-No organization directly accesses another organization's internal resources.
+The Client Network never accesses Company Agents directly.
 
 ---
 
-# 3.2 A2A Communication Boundary
+## Company Network
 
-All agent communication must pass through the A2A Gateway.
+Responsible for
 
-Correct:
+- Requirement Analysis
+- Planning
+- Cost Estimation
+- Technical Analysis
+- Timeline
+- Risk Analysis
+- Proposal Generation
 
+The Company Network never communicates directly with the client.
+
+---
+
+## Gateway
+
+Acts as the secure bridge.
+
+Responsibilities
+
+- Authenticate requests
+- Validate JWT
+- Route requests
+- Route responses
+- Log communications
+- Prevent direct access between networks
+
+The Gateway contains no business logic.
+
+---
+
+# 4. Client Network Components
+
+```text
+Client
+
+↓
+
+Requirement Form
+
+↓
+
+Client Chat
+
+↓
+
+FastAPI Backend
+
+↓
 
 Client Agent
 
-  |
+↓
 
-  v
+PostgreSQL
 
-A2A Gateway
+↓
 
-  |
+pgvector
 
-  v
+↓
 
-Project Manager Agent
+Llama
 
-
-Incorrect:
-
-
-Client Agent
-
-  |
-
-Direct API Call
-
-  |
-
-Company Agent
-
-
----
-
-# 4. Major Components
-
-The system contains four primary layers.
-
----
-
-# Layer 1: Client Network
-
-Responsible for client-side interaction.
-
-Components:
-
-
-Client Portal
-
-  |
-
-Client Backend
-
-  |
-
-Client Agent
-
-  |
-
-Client Database
-
-
-Responsibilities:
-
-- User authentication
-- Project request creation
-- Requirement submission
-- Clarification responses
-- Proposal review
-
----
-
-# Layer 2: A2A Gateway
-
-The communication bridge between organizations.
-
-Responsibilities:
-
-## Agent Registration
-
-Maintains registered agents:
-
-Example:
-
-
-client-agent
-
-pm-agent
-
-technical-agent
-
-cost-agent
-
-
----
-
-## Authentication
-
-Validates communication requests.
-
-Example:
-
-
-JWT Token
-
-Agent Identity
-
-Organization Identity
-
-
----
-
-## Message Routing
-
-Routes messages between agents.
-
-Example:
-
-
-PROJECT_REQUEST
-
-Client Agent
-
-  |
+↓
 
 Gateway
+```
 
-  |
+---
+
+## Requirement Form
+
+The client begins by submitting structured project information.
+
+Fields
+
+- Project Name
+- Description
+- Target Platforms
+- Target Audience
+- Timeline
+- Budget
+- Features
+- Third-party Integrations
+
+After submission
+
+- Project is created
+- Chat session is created
+- Client is redirected to chatbot
+
+---
+
+## Client Chat
+
+Visible conversation.
+
+Example
+
+```text
+Client
+
+↓
+
+Client Agent
+```
+
+Responsibilities
+
+- Welcome client
+- Explain analysis
+- Ask clarification questions
+- Display summary
+- Collect approval
+
+---
+
+## Client Backend
+
+Responsibilities
+
+- Authentication
+- API endpoints
+- Project APIs
+- Chat APIs
+- Memory APIs
+- Gateway communication
+
+---
+
+## Client Agent
+
+The Client Agent represents the client organization.
+
+Responsibilities
+
+- Analyze project
+- Retrieve project memory
+- Ask follow-up questions
+- Summarize conversations
+- Communicate with PM Agent
+- Maintain chat history
+
+The Client Agent decides whether it already knows the answer to PM questions before involving the client.
+
+---
+
+# 5. Company Network Components
+
+```text
+Gateway
+
+↓
 
 PM Agent
 
+↓
+
+BA
+
+↓
+
+Technical
+
+↓
+
+Cost
+
+↓
+
+Timeline
+
+↓
+
+Risk
+
+↓
+
+Proposal
+```
 
 ---
 
-## Message Validation
+## Project Manager Agent
 
-Ensures messages follow the defined contract.
+The Project Manager Agent is the orchestrator.
+
+Responsibilities
+
+- Receive project
+- Analyze request
+- Build execution plan
+- Create agent tasks
+- Monitor execution
+- Merge results
+- Generate summary
+- Approve requirement document
 
 ---
 
-## Communication Logging
+## Business Analyst Agent
 
-Stores:
+Responsibilities
 
-- Sender
-- Receiver
-- Timestamp
-- Message Type
-- Status
+- Requirement analysis
+- Functional requirement extraction
+- User story generation
+- Requirement gaps
+
+Output
+
+Requirement Analysis Report
 
 ---
 
-# Layer 3: Company Network
+## Technical Agent
 
-Responsible for processing project requests.
+Responsibilities
 
-Components:
+- Architecture recommendation
+- Technology stack
+- Database recommendation
+- API strategy
+- Third-party integrations
 
+Output
 
-Manager Portal
+Technical Design Summary
 
-  |
+---
 
-Company Backend
+## Cost Agent
 
-  |
+Responsibilities
+
+- Development estimation
+- Team estimation
+- Cost calculation
+
+Output
+
+Estimated Budget
+
+---
+
+## Timeline Agent
+
+Responsibilities
+
+- Sprint planning
+- Milestones
+- Delivery estimation
+
+Output
+
+Delivery Plan
+
+---
+
+## Risk Agent
+
+Responsibilities
+
+- Technical risks
+- Business risks
+- Schedule risks
+- Mitigation strategies
+
+Output
+
+Risk Assessment
+
+---
+
+# 6. Shared Infrastructure
+
+Both networks use the same logical components.
+
+## PostgreSQL
+
+Stores
+
+- Projects
+- Requirements
+- Chat Sessions
+- Chat Messages
+- Tasks
+- Agent Memory
+- Proposal
+- Approvals
+
+Transactional data never goes into pgvector.
+
+---
+
+## pgvector
+
+Stores only semantic knowledge.
+
+Examples
+
+- Requirement summaries
+- Project summaries
+- Architecture decisions
+- Proposal summaries
+- Client preferences
+
+Avoid storing every chat message.
+
+---
+
+## Llama
+
+Used by every agent.
+
+Responsibilities
+
+- Requirement analysis
+- Reasoning
+- Planning
+- Tool selection
+- Summarization
+- Proposal generation
+
+The Llama model never stores memory itself.
+
+All memory is retrieved from PostgreSQL and pgvector before prompting.
+
+---
+
+# 7. Two Chatbot Model
+
+The system exposes only two conversations.
+
+---
+
+## Chatbot 1
+
+Visible
+
+```text
+Client
+
+↕
+
+Client Agent
+```
+
+Purpose
+
+- Requirement discussion
+- Clarifications
+- Review
+- Approval
+
+---
+
+## Chatbot 2
+
+Internal
+
+```text
+Client Agent
+
+↕
 
 Project Manager Agent
+```
 
-  |
+Purpose
 
-Specialist Agents
+- Requirement transfer
+- Clarification exchange
+- Task status
+- Summary exchange
 
-  |
-
-Company Database
-
-
----
-
-# Layer 4: Autonomous Agent Layer
-
-Contains AI agents.
-
-Each agent contains:
-
-
-Agent
-
-|
-
-Goal
-
-|
-
-Memory
-
-|
-
-Planner
-
-|
-
-Reasoner
-
-|
-
-Tools
-
-|
-
-Communication
-
+The client never sees this conversation.
 
 ---
 
-# 5. Agent Architecture Flow
+# 8. Internal Agent Collaboration
 
-Example:
+The PM Agent coordinates all specialist agents.
 
+```text
+Project Manager
 
-Project Request
+↓
 
-  |
+Requirement Analysis
 
-  v
-
-Project Manager Agent
-
-  |
-
-  |
+↓
 
 Create Plan
 
-  |
+↓
 
-  +----------------+
+Create Tasks
 
-  |                |
+↓
 
-  v                v
+Business Analyst
 
-Business Analyst Technical Agent
+↓
 
-  |
+Technical Agent
 
-  v
+↓
 
 Cost Agent
 
-  |
-
-  v
+↓
 
 Timeline Agent
 
-  |
-
-  v
+↓
 
 Risk Agent
 
-  |
+↓
 
-  v
+Merge Results
 
-Proposal Generation
+↓
 
+Need Clarification?
+
+      │
+
+ YES──┴──NO
+
+ │          │
+
+ ▼          ▼
+
+Ask Client   Generate Summary
+```
+
+The PM Agent is the only agent that communicates outside the Company Network.
 
 ---
 
-# 6. Data Flow
+# 9. Data Flow
 
 ## Step 1
 
-Client creates project request.
+Client submits project.
 
-Example:
+↓
 
+Stored in PostgreSQL.
 
-Build healthcare application
+↓
 
+Chat Session created.
+
+↓
+
+Client redirected to chat.
 
 ---
 
 ## Step 2
 
-Client Agent validates:
+Client Agent loads
 
-Checks:
+- Project
+- Requirements
+- Previous memory
 
-- Missing requirements
-- Required information
-- Business context
+↓
+
+Llama analyzes requirements.
+
+↓
+
+Client Agent starts conversation.
 
 ---
 
 ## Step 3
 
-Client Agent sends A2A message.
+Requirement package sent.
 
-
-PROJECT_REQUEST
-
-
-Through:
-
-
+```text
 Client Agent
 
- |
+↓
 
-A2A Gateway
+Gateway
 
- |
+↓
 
 PM Agent
-
+```
 
 ---
 
 ## Step 4
 
-PM Agent plans execution.
+PM creates tasks.
 
-Creates tasks:
+```text
+Task 1
 
+Requirement Analysis
 
-Analyze requirements
+↓
 
-Design architecture
+BA
 
-Estimate cost
+-------------------
 
-Estimate timeline
+Task 2
 
-Analyze risks
+Architecture
 
+↓
+
+Technical
+
+-------------------
+
+Task 3
+
+Cost
+
+↓
+
+Cost Agent
+
+-------------------
+
+Task 4
+
+Timeline
+
+↓
+
+Timeline
+
+-------------------
+
+Task 5
+
+Risk
+
+↓
+
+Risk
+```
 
 ---
 
 ## Step 5
 
-Specialist agents execute tasks.
+Agents complete tasks.
 
-Each agent:
+↓
 
-- Receives task
-- Uses LLM reasoning
-- Uses tools
-- Stores results
-- Sends response
+Responses stored.
+
+↓
+
+PM retrieves results.
+
+↓
+
+Summary generated.
 
 ---
 
 ## Step 6
 
-PM Agent generates proposal.
+If information is missing
 
-Combines:
+```text
+PM
 
+↓
 
-Requirements
+Gateway
 
-Architecture
+↓
 
-Cost
+Client Agent
 
-Timeline
+↓
 
-Risks
+Can Client Agent Answer?
 
+      │
 
----
+ YES──┴──NO
 
-# 7. Security Model
+ │          │
 
-The PoC uses:
+ ▼          ▼
 
-- JWT authentication
-- Agent identity validation
-- Organization isolation
-- Message validation
-
-Security goal:
-
-Ensure only authorized agents can communicate.
+Reply     Ask Client
+```
 
 ---
 
-# 8. Deployment View
+## Step 7
 
-For PoC:
+Summary approved by PM.
 
+↓
 
-Docker Compose
+Sent to Client Agent.
 
-Client Service
+↓
 
-Company Service
+Displayed to Client.
 
-A2A Gateway
+↓
 
-Database Services
+Client approves.
 
+↓
 
----
-
-# 9. Future Scalability
-
-The architecture can later support:
-
-- Multiple clients
-- Multiple software companies
-- More specialized agents
-- Advanced memory systems
-- Enterprise authentication
+Proposal generated.
 
 ---
 
-# Conclusion
+# 10. Component Responsibilities
 
-The system architecture establishes a secure communication model where autonomous agents from different organizations collaborate through an A2A Gateway.
+| Component | Responsibility |
+|-----------|----------------|
+| Client | Submit requirements and approve summary |
+| Client Agent | Chat, validation, memory, gateway communication |
+| Gateway | Secure routing between networks |
+| PM Agent | Orchestration and planning |
+| BA Agent | Requirement analysis |
+| Technical Agent | Architecture recommendation |
+| Cost Agent | Cost estimation |
+| Timeline Agent | Delivery planning |
+| Risk Agent | Risk assessment |
+| PostgreSQL | Transactional storage |
+| pgvector | Semantic retrieval |
+| Llama | Reasoning and planning |
 
-The architecture keeps organizations independent while enabling intelligent agent-to-agent collaboration powered by LLM reasoning.
+---
+
+# 11. Design Principles
+
+This architecture follows several principles.
+
+### Independent Networks
+
+Client and Company networks remain isolated.
+
+---
+
+### Chat-First Experience
+
+The user interacts only with a conversational interface.
+
+---
+
+### Autonomous Collaboration
+
+Agents communicate without human coordination.
+
+---
+
+### Simple PoC
+
+Avoid enterprise complexity.
+
+- No Kubernetes
+- No Message Brokers
+- No Event Streaming
+- No Microservices
+
+---
+
+### Persistent Memory
+
+Transactional data is stored in PostgreSQL.
+
+Semantic knowledge is stored in pgvector.
+
+---
+
+### Stateless Gateway
+
+The Gateway performs only
+
+- Authentication
+- Validation
+- Routing
+- Logging
+
+No reasoning or business logic exists inside the Gateway.
+
+---
+
+# 12. Architecture Summary
+
+The chatbot-based A2A architecture provides:
+
+- Two independent organizational networks
+- Two chatbot conversations
+- Autonomous agent collaboration
+- Central PM orchestration
+- PostgreSQL for transactional persistence
+- pgvector for semantic retrieval
+- Llama for reasoning and planning
+- Secure communication through a stateless A2A Gateway
+
+This architecture is intentionally lightweight, making it suitable for a Proof of Concept while still demonstrating realistic multi-agent collaboration.

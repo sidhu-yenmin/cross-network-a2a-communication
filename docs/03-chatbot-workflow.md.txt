@@ -1,0 +1,1062 @@
+# Chatbot Workflow
+
+## 1. Overview
+
+The chatbot workflow is the heart of this Proof of Concept.
+
+Instead of users interacting with multiple autonomous agents, the entire experience is presented through **two conversational interfaces**:
+
+1. Client ↔ Client Agent (Visible)
+2. Client Agent ↔ Project Manager Agent (Internal)
+
+The client only interacts with the Client Agent.
+
+The Client Agent acts as:
+
+- Requirement Analyst
+- AI Assistant
+- Communication Bridge
+- Memory Manager
+- Gateway to the Company Network
+
+The Client Agent communicates with the Project Manager Agent through the A2A Gateway, while the Project Manager orchestrates the remaining specialist agents.
+
+---
+
+# 2. Complete Workflow
+
+```text
+Project Form
+
+↓
+
+Client Agent Reviews
+
+↓
+
+Client Chat Starts
+
+↓
+
+Requirement Validation
+
+↓
+
+Need More Information?
+
+│
+
+├── YES → Ask Client
+
+│
+
+└── NO
+
+↓
+
+Send Request to PM
+
+↓
+
+PM Creates Plan
+
+↓
+
+Delegate Tasks
+
+↓
+
+BA
+
+↓
+
+Technical
+
+↓
+
+Cost
+
+↓
+
+Timeline
+
+↓
+
+Risk
+
+↓
+
+PM Collects Results
+
+↓
+
+Need Clarification?
+
+│
+
+├── YES
+
+│      ↓
+
+│ Client Agent
+
+│      ↓
+
+│ Can Answer?
+
+│
+
+│ YES → Reply
+
+│
+
+│ NO
+
+│
+
+│ Ask Client
+
+│
+
+│ Client Replies
+
+│
+
+│ Continue
+
+│
+
+└── NO
+
+↓
+
+Generate Requirement Summary
+
+↓
+
+PM Approval
+
+↓
+
+Client Review
+
+↓
+
+Changes?
+
+│
+
+├── YES
+
+│
+
+│ Continue Chat
+
+│
+
+└── NO
+
+↓
+
+Generate Proposal
+
+↓
+
+Project Complete
+```
+
+---
+
+# 3. Phase 1 - Project Submission
+
+The workflow begins with a structured project requirement form.
+
+## Form Fields
+
+```text
+Project Name
+
+Description
+
+Target Platforms
+
+Target Audience
+
+Timeline
+
+Budget
+
+Key Features
+
+Third-party Integrations
+```
+
+Example
+
+```text
+Project Name
+
+Food Delivery App
+
+Description
+
+Build an online food ordering platform.
+
+Platforms
+
+Android
+iOS
+Web
+
+Budget
+
+$40,000
+
+Timeline
+
+4 Months
+
+Key Features
+
+Customer App
+Restaurant Portal
+Delivery Tracking
+
+Integrations
+
+Stripe
+Firebase
+Google Maps
+```
+
+---
+
+## Backend Processing
+
+After clicking Submit
+
+System performs
+
+- Validate Form
+- Create Project
+- Save Requirements
+- Create Chat Session
+- Create Agent Session
+- Redirect User to Chat
+
+Project status becomes
+
+```text
+NEW
+```
+
+---
+
+# 4. Phase 2 - Client Agent Analysis
+
+The Client Agent automatically starts processing.
+
+Steps
+
+```text
+Load Project
+
+↓
+
+Load Requirement
+
+↓
+
+Load Previous Memory
+
+↓
+
+Retrieve Similar Projects
+
+↓
+
+Generate Prompt
+
+↓
+
+Llama Analysis
+
+↓
+
+Identify Missing Information
+
+↓
+
+Generate Conversation
+
+↓
+
+Store Analysis
+```
+
+The user sees
+
+```text
+Hi John,
+
+Thank you for submitting your project.
+
+I've reviewed your requirements.
+
+Your project appears to be a food delivery application targeting Android, iOS, and Web.
+
+Everything looks clear so far.
+
+However, I need clarification regarding:
+
+• Payment Gateway
+
+• Delivery Radius
+
+• Admin Roles
+
+Let's start with the payment gateway.
+
+Do you already have a preferred provider?
+```
+
+---
+
+# 5. Client Conversation Loop
+
+The conversation continues until enough information is collected.
+
+```text
+Client
+
+↓
+
+Client Agent
+
+↓
+
+Understand Response
+
+↓
+
+Update Memory
+
+↓
+
+Need Another Question?
+
+│
+
+├── YES
+
+↓
+
+Ask Again
+
+│
+
+└── NO
+
+↓
+
+Send to Company
+```
+
+Example
+
+```text
+Agent
+
+Which payment gateway would you like to use?
+
+Client
+
+Stripe.
+
+↓
+
+Memory Updated
+
+↓
+
+Next Question
+
+Do you require multiple restaurant owners?
+
+↓
+
+Client
+
+Yes.
+```
+
+---
+
+# 6. Sending Request to Company Network
+
+When enough information is available
+
+Client Agent creates a Requirement Package.
+
+Example
+
+```json
+{
+  "projectId": "P001",
+  "summary": "...",
+  "requirements": "...",
+  "clientPreferences": "...",
+  "conversationSummary": "...",
+  "status": "READY_FOR_ANALYSIS"
+}
+```
+
+Flow
+
+```text
+Client Agent
+
+↓
+
+Gateway
+
+↓
+
+PM Agent
+```
+
+---
+
+# 7. PM Agent Processing
+
+The Project Manager becomes responsible.
+
+Workflow
+
+```text
+Receive Request
+
+↓
+
+Read Summary
+
+↓
+
+Retrieve Memory
+
+↓
+
+Llama Analysis
+
+↓
+
+Build Execution Plan
+
+↓
+
+Create Tasks
+
+↓
+
+Assign Tasks
+```
+
+Project status
+
+```text
+UNDER_ANALYSIS
+```
+
+---
+
+# 8. Task Delegation
+
+PM creates five independent tasks.
+
+```text
+Requirement Analysis
+
+↓
+
+Business Analyst
+
+-------------------
+
+Architecture
+
+↓
+
+Technical Agent
+
+-------------------
+
+Cost Estimation
+
+↓
+
+Cost Agent
+
+-------------------
+
+Timeline
+
+↓
+
+Timeline Agent
+
+-------------------
+
+Risk Assessment
+
+↓
+
+Risk Agent
+```
+
+Each task contains
+
+```text
+Project
+
+Goal
+
+Requirements
+
+Previous Memory
+
+Expected Output
+```
+
+---
+
+# 9. Specialist Agent Workflow
+
+Every specialist follows the same lifecycle.
+
+```text
+Receive Task
+
+↓
+
+Retrieve Context
+
+↓
+
+Retrieve Semantic Memory
+
+↓
+
+Generate Prompt
+
+↓
+
+Llama Reasoning
+
+↓
+
+Generate Analysis
+
+↓
+
+Store Result
+
+↓
+
+Return Response
+```
+
+Example
+
+Technical Agent
+
+Input
+
+```text
+Food Delivery Platform
+```
+
+Output
+
+```text
+Recommended Stack
+
+React
+
+FastAPI
+
+PostgreSQL
+
+Redis
+
+Firebase Notifications
+
+Stripe Payments
+```
+
+---
+
+# 10. PM Collects Results
+
+The PM waits until every task is completed.
+
+```text
+BA
+
+↓
+
+Technical
+
+↓
+
+Cost
+
+↓
+
+Timeline
+
+↓
+
+Risk
+
+↓
+
+Merge Results
+```
+
+PM generates
+
+- Requirement Summary
+- Missing Information
+- Suggestions
+
+---
+
+# 11. Clarification Workflow
+
+PM determines whether clarification is required.
+
+Decision
+
+```text
+Need Clarification?
+
+↓
+
+YES
+
+↓
+
+Create Question
+
+↓
+
+Gateway
+
+↓
+
+Client Agent
+```
+
+Example
+
+```text
+Should restaurant owners manage their own menu?
+```
+
+---
+
+# 12. Client Agent Decision
+
+The Client Agent decides whether it already knows the answer.
+
+```text
+Question
+
+↓
+
+Search Project Memory
+
+↓
+
+Search Chat History
+
+↓
+
+Search pgvector
+
+↓
+
+Answer Found?
+
+│
+
+├── YES
+
+↓
+
+Reply Immediately
+
+│
+
+└── NO
+
+↓
+
+Ask Client
+```
+
+---
+
+## Example 1
+
+PM asks
+
+```text
+How many admin roles are required?
+```
+
+Memory contains
+
+```text
+Admin
+
+Restaurant Owner
+
+Delivery Partner
+```
+
+Client Agent replies immediately.
+
+Client never sees the question.
+
+---
+
+## Example 2
+
+PM asks
+
+```text
+Should delivery partners receive GPS tracking?
+```
+
+Memory
+
+No answer found.
+
+Client Agent asks
+
+```text
+Would you like delivery partners to have real-time GPS tracking?
+```
+
+Client replies
+
+```text
+Yes.
+```
+
+Memory updated.
+
+Client Agent forwards response.
+
+---
+
+# 13. Continuous Memory Updates
+
+Every conversation updates
+
+## PostgreSQL
+
+Store
+
+- Chat History
+- Project State
+- Agent State
+
+## pgvector
+
+Store
+
+- Requirement Summary
+- Design Decisions
+- Client Preferences
+- Business Rules
+
+Simple greetings are not embedded.
+
+---
+
+# 14. Requirement Completion
+
+Eventually
+
+PM determines
+
+```text
+No Missing Information
+```
+
+Workflow
+
+```text
+Merge Responses
+
+↓
+
+Generate Summary
+
+↓
+
+Store Summary
+
+↓
+
+Pending Approval
+```
+
+---
+
+# 15. PM Approval
+
+Unlike automated systems
+
+The PM Agent requires manual approval before sharing the summary.
+
+Status
+
+```text
+WAITING_PM_APPROVAL
+```
+
+After approval
+
+```text
+SUMMARY_APPROVED
+```
+
+Summary returned.
+
+---
+
+# 16. Client Review
+
+Client Agent receives
+
+```text
+Requirement Summary
+```
+
+Conversation
+
+```text
+Hi John,
+
+Our project team has completed the requirement analysis.
+
+Please review the following summary.
+
+If everything looks correct, approve it.
+
+Otherwise let me know what you'd like to modify.
+```
+
+---
+
+# 17. Client Decision
+
+Decision
+
+```text
+Approve?
+
+│
+
+├── YES
+
+↓
+
+Generate Proposal
+
+│
+
+└── NO
+
+↓
+
+Continue Conversation
+
+↓
+
+Update Requirements
+
+↓
+
+Send Back to PM
+```
+
+---
+
+# 18. Proposal Generation
+
+After approval
+
+PM creates
+
+```text
+Executive Summary
+
+Project Scope
+
+Deliverables
+
+Architecture
+
+Technology Stack
+
+Timeline
+
+Cost
+
+Risk Analysis
+
+Assumptions
+```
+
+Stored
+
+```text
+proposal table
+```
+
+Status
+
+```text
+PROPOSAL_READY
+```
+
+---
+
+# 19. Workflow State Machine
+
+```text
+NEW
+
+↓
+
+ANALYZING
+
+↓
+
+WAITING_FOR_CLIENT
+
+↓
+
+READY_FOR_ANALYSIS
+
+↓
+
+UNDER_ANALYSIS
+
+↓
+
+WAITING_PM_APPROVAL
+
+↓
+
+SUMMARY_APPROVED
+
+↓
+
+WAITING_CLIENT_APPROVAL
+
+↓
+
+PROPOSAL_READY
+
+↓
+
+COMPLETED
+```
+
+---
+
+# 20. Memory Usage During Workflow
+
+| Stage | PostgreSQL | pgvector |
+|----------|---------------------|----------------|
+| Project Form | Save Project | No |
+| Chat | Save Messages | No |
+| Client Reply | Save Chat | Update Summary |
+| PM Analysis | Read Data | Retrieve Similar Context |
+| Specialist Agents | Read Tasks | Retrieve Decisions |
+| Summary | Save Summary | Embed Summary |
+| Proposal | Save Proposal | Embed Proposal |
+
+---
+
+# 21. Sequence Diagram
+
+```text
+Client
+    │
+    │ Submit Form
+    ▼
+Client Agent
+    │
+    │ Analyze
+    │
+    ▼
+Chat Begins
+    │
+    │ Clarification
+    │
+    ▼
+Gateway
+    │
+    ▼
+PM Agent
+    │
+    ├────────► BA
+    ├────────► Technical
+    ├────────► Cost
+    ├────────► Timeline
+    └────────► Risk
+            │
+            ▼
+      Collect Results
+            │
+            ▼
+ Need Clarification?
+      │
+ YES──┴──NO
+ │          │
+ ▼          ▼
+Client      Summary
+Agent       Generated
+ │
+ ▼
+Client
+ │
+ ▼
+Approval
+ │
+ ▼
+Proposal
+```
+
+---
+
+# 22. Workflow Summary
+
+This chatbot workflow ensures:
+
+- The client interacts with only one visible AI assistant.
+- The Client Agent intelligently filters and answers internal questions whenever possible.
+- The Project Manager orchestrates specialist agents autonomously.
+- All reasoning is performed using Llama.
+- PostgreSQL stores transactional data.
+- pgvector stores semantic project knowledge.
+- The client is only involved when human input is genuinely required.
+- The final outcome is an approved project summary followed by a generated proposal.
+
+This workflow keeps the PoC simple while demonstrating autonomous multi-agent collaboration across independent organizational networks.

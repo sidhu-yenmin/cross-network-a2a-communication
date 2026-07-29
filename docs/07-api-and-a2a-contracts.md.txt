@@ -1,0 +1,979 @@
+# API and A2A Communication Contracts
+
+## 1. Overview
+
+This document defines the communication contracts between all components of the autonomous chatbot system.
+
+The architecture uses REST APIs with JSON payloads.
+
+Communication flow:
+
+```text
+Client
+
+↓
+
+Client Backend
+
+↓
+
+Client Agent
+
+↓
+
+A2A Gateway
+
+↓
+
+Project Manager Agent
+
+↓
+
+Specialist Agents
+```
+
+The A2A Gateway is the only communication bridge between the Client Network and Company Network.
+
+---
+
+# 2. Communication Principles
+
+## 2.1 No Direct Communication
+
+The following communication is NOT allowed:
+
+```text
+Client Agent
+
+X
+
+Technical Agent
+```
+
+or
+
+```text
+Client
+
+X
+
+PM Agent
+```
+
+All requests must go through:
+
+```text
+Client Agent
+
+↓
+
+A2A Gateway
+
+↓
+
+PM Agent
+```
+
+---
+
+## 2.2 Message Structure
+
+Every A2A message follows a common structure.
+
+```json
+{
+  "message_id": "uuid",
+  "conversation_id": "uuid",
+  "project_id": "uuid",
+  "sender": "client_agent",
+  "receiver": "pm_agent",
+  "message_type": "PROJECT_REQUEST",
+  "timestamp": "2026-07-29T10:00:00",
+  "payload": {}
+}
+```
+
+---
+
+# 3. Client Network APIs
+
+## 3.1 Create Project
+
+Creates a new project from requirement form.
+
+### Endpoint
+
+```
+POST /api/projects
+```
+
+---
+
+### Request
+
+```json
+{
+  "project_name": "Food Delivery Platform",
+
+  "description":
+  "Mobile application for ordering food",
+
+  "target_platforms":
+  [
+    "Android",
+    "iOS",
+    "Web"
+  ],
+
+  "target_audience":
+  "Customers and restaurants",
+
+  "timeline":
+  "4 months",
+
+  "budget":
+  "$40000",
+
+  "key_features":
+  [
+    "Authentication",
+    "Payment",
+    "Tracking"
+  ],
+
+  "integrations":
+  [
+    "Stripe",
+    "Google Maps"
+  ]
+}
+```
+
+---
+
+### Response
+
+```json
+{
+  "project_id":
+  "P001",
+
+  "status":
+  "CREATED",
+
+  "chat_session_id":
+  "CS001"
+}
+```
+
+---
+
+# 4. Client Chat APIs
+
+## 4.1 Send Client Message
+
+Used when the user sends a message.
+
+### Endpoint
+
+```
+POST /api/chat/message
+```
+
+---
+
+### Request
+
+```json
+{
+  "session_id":
+  "CS001",
+
+  "message":
+  "We want Stripe payment integration."
+}
+```
+
+---
+
+### Processing
+
+```text
+User Message
+
+↓
+
+Save Message
+
+↓
+
+Client Agent
+
+↓
+
+Llama Reasoning
+
+↓
+
+Generate Response
+
+↓
+
+Save Response
+```
+
+---
+
+### Response
+
+```json
+{
+  "message":
+  "I have updated the payment requirement.",
+
+  "sender":
+  "CLIENT_AGENT"
+}
+```
+
+---
+
+# 5. Client Agent to Gateway Communication
+
+This is the first A2A communication.
+
+---
+
+## 5.1 Project Request Message
+
+Client Agent sends analyzed requirements.
+
+### Endpoint
+
+```
+POST /gateway/messages
+```
+
+---
+
+### Message Type
+
+```
+PROJECT_REQUEST
+```
+
+---
+
+### Request
+
+```json
+{
+  "message_id":
+  "MSG001",
+
+  "project_id":
+  "P001",
+
+  "sender":
+  "CLIENT_AGENT",
+
+  "receiver":
+  "PM_AGENT",
+
+  "message_type":
+  "PROJECT_REQUEST",
+
+  "payload":
+  {
+
+    "project_summary":
+    "Food delivery application",
+
+    "requirements":
+    [
+      "Customer application",
+      "Restaurant portal",
+      "Delivery tracking"
+    ],
+
+    "budget":
+    "$40000",
+
+    "timeline":
+    "4 months",
+
+    "client_preferences":
+    [
+      "Mobile first",
+      "Cloud deployment"
+    ]
+  }
+}
+```
+
+---
+
+# 6. Gateway Responsibilities
+
+The Gateway performs:
+
+## Authentication
+
+Validate JWT token.
+
+---
+
+## Authorization
+
+Verify:
+
+```
+Client Agent
+
+is allowed to communicate with
+
+PM Agent
+```
+
+---
+
+## Validation
+
+Check:
+
+- Message format
+- Required fields
+- Sender identity
+
+---
+
+## Routing
+
+Forward message.
+
+---
+
+## Logging
+
+Store:
+
+```
+gateway_logs
+```
+
+---
+
+# 7. PM Agent APIs
+
+## 7.1 Receive Project Request
+
+### Endpoint
+
+```
+POST /agent/project/request
+```
+
+---
+
+### Input
+
+```json
+{
+  "project_id":
+  "P001",
+
+  "requirements":
+  {},
+
+  "conversation_summary":
+  "..."
+}
+```
+
+---
+
+### Processing
+
+```text
+Receive Request
+
+↓
+
+Create Agent Session
+
+↓
+
+Analyze Requirements
+
+↓
+
+Create Tasks
+
+↓
+
+Assign Agents
+```
+
+---
+
+# 8. PM Task Creation API
+
+## Create Agent Task
+
+### Endpoint
+
+```
+POST /agent/tasks
+```
+
+---
+
+### Request
+
+```json
+{
+  "project_id":
+  "P001",
+
+  "agent_name":
+  "technical_agent",
+
+  "task":
+  "Design application architecture",
+
+  "expected_output":
+  "Technical recommendation"
+}
+```
+
+---
+
+### Response
+
+```json
+{
+  "task_id":
+  "TASK001",
+
+  "status":
+  "CREATED"
+}
+```
+
+---
+
+# 9. Specialist Agent Communication
+
+Specialist agents communicate only with PM Agent.
+
+---
+
+## Task Assignment
+
+Example:
+
+PM → Technical Agent
+
+```json
+{
+  "task_id":
+  "TASK001",
+
+  "agent":
+  "technical_agent",
+
+  "goal":
+  "Recommend architecture",
+
+  "context":
+  {
+    "project":
+    "Food Delivery Platform",
+
+    "requirements":
+    [
+      "Mobile App",
+      "Tracking"
+    ]
+  }
+}
+```
+
+---
+
+# 10. Agent Result Response
+
+Specialist agent returns:
+
+```json
+{
+  "task_id":
+  "TASK001",
+
+  "agent":
+  "technical_agent",
+
+  "status":
+  "COMPLETED",
+
+  "result":
+  {
+    "architecture":
+    "Microservice-ready modular architecture",
+
+    "backend":
+    "FastAPI",
+
+    "database":
+    "PostgreSQL"
+  }
+}
+```
+
+---
+
+# 11. Clarification Flow API
+
+When PM requires information.
+
+---
+
+## PM Creates Question
+
+Message Type:
+
+```
+CLARIFICATION_REQUEST
+```
+
+---
+
+Payload:
+
+```json
+{
+  "question":
+  "Do you require delivery partner tracking?",
+
+  "reason":
+  "Required for timeline estimation"
+}
+```
+
+---
+
+Flow:
+
+```text
+PM Agent
+
+↓
+
+Gateway
+
+↓
+
+Client Agent
+```
+
+---
+
+# 12. Client Agent Answer Decision
+
+The Client Agent processes the question.
+
+```text
+Receive Question
+
+↓
+
+Search Memory
+
+↓
+
+Search pgvector
+
+↓
+
+Answer Exists?
+
+       │
+
+ YES───┴───NO
+
+ │          │
+
+ ▼          ▼
+
+Reply      Ask Client
+```
+
+---
+
+## If Answer Exists
+
+Response:
+
+```json
+{
+  "message_type":
+  "CLARIFICATION_RESPONSE",
+
+  "answer":
+  "Yes, GPS tracking is required."
+}
+```
+
+---
+
+## If Answer Does Not Exist
+
+Client Agent asks:
+
+```text
+Would you like delivery partners to have GPS tracking?
+```
+
+---
+
+# 13. PM Summary API
+
+After completing analysis:
+
+### Endpoint
+
+```
+POST /proposal/summary
+```
+
+---
+
+Payload:
+
+```json
+{
+  "project_id":
+  "P001",
+
+  "summary":
+  {
+    "scope":
+    "...",
+
+    "technology":
+    [
+      "FastAPI",
+      "PostgreSQL"
+    ],
+
+    "timeline":
+    "4 months",
+
+    "cost":
+    "$40000",
+
+    "risks":
+    [
+      "API dependency"
+    ]
+  }
+}
+```
+
+---
+
+# 14. PM Approval Flow
+
+Status:
+
+```
+WAITING_PM_APPROVAL
+```
+
+PM reviews.
+
+Approve:
+
+```json
+{
+  "approval":
+  true,
+
+  "approved_by":
+  "PM_AGENT"
+}
+```
+
+Status:
+
+```
+SUMMARY_APPROVED
+```
+
+---
+
+# 15. Send Summary To Client Agent
+
+Message Type:
+
+```
+PROJECT_SUMMARY
+```
+
+---
+
+Payload:
+
+```json
+{
+  "project_id":
+  "P001",
+
+  "summary":
+  {
+    "overview":
+    "...",
+
+    "scope":
+    "...",
+
+    "cost":
+    "$40000",
+
+    "timeline":
+    "4 months"
+  }
+}
+```
+
+---
+
+# 16. Client Approval API
+
+Client reviews summary.
+
+Endpoint:
+
+```
+POST /projects/{id}/approval
+```
+
+---
+
+Request:
+
+```json
+{
+  "decision":
+  "APPROVED",
+
+  "comments":
+  "Everything looks correct."
+}
+```
+
+---
+
+Response:
+
+```json
+{
+  "status":
+  "CLIENT_APPROVED"
+}
+```
+
+---
+
+# 17. Proposal Generation API
+
+After client approval.
+
+Endpoint:
+
+```
+POST /proposal/generate
+```
+
+---
+
+Request:
+
+```json
+{
+  "project_id":
+  "P001"
+}
+```
+
+---
+
+Response:
+
+```json
+{
+  "proposal_id":
+  "PROP001",
+
+  "status":
+  "READY"
+}
+```
+
+---
+
+# 18. Complete Message Flow
+
+```text
+Client
+
+↓
+
+Client Backend
+
+↓
+
+Client Agent
+
+↓
+
+PROJECT_REQUEST
+
+↓
+
+Gateway
+
+↓
+
+PM Agent
+
+↓
+
+TASK_REQUEST
+
+↓
+
+BA / Technical / Cost / Timeline / Risk
+
+↓
+
+TASK_RESULT
+
+↓
+
+PM Agent
+
+↓
+
+CLARIFICATION_REQUEST
+
+↓
+
+Gateway
+
+↓
+
+Client Agent
+
+↓
+
+Client
+
+↓
+
+CLARIFICATION_RESPONSE
+
+↓
+
+PM Agent
+
+↓
+
+SUMMARY
+
+↓
+
+PM Approval
+
+↓
+
+Client Approval
+
+↓
+
+Proposal
+```
+
+---
+
+# 19. Message Types
+
+Supported A2A messages:
+
+| Message Type | Purpose |
+|---|---|
+| PROJECT_REQUEST | Initial requirement transfer |
+| TASK_REQUEST | Assign work to agent |
+| TASK_RESPONSE | Agent result |
+| CLARIFICATION_REQUEST | Ask missing information |
+| CLARIFICATION_RESPONSE | Provide information |
+| SUMMARY | Requirement summary |
+| APPROVAL_REQUEST | Request approval |
+| APPROVAL_RESPONSE | Approval result |
+| PROPOSAL | Final proposal |
+
+---
+
+# 20. Error Handling
+
+Every response should contain:
+
+```json
+{
+  "status":
+  "SUCCESS",
+
+  "error":
+  null
+}
+```
+
+Failure example:
+
+```json
+{
+  "status":
+  "FAILED",
+
+  "error":
+  "Agent timeout"
+}
+```
+
+---
+
+# 21. API Design Principles
+
+- REST-based communication
+- JSON-only messages
+- Stateless gateway
+- Persistent message logging
+- Clear agent ownership
+- No direct agent access
+- Every action traceable through logs
+
+---
+
+# 22. Summary
+
+The API architecture provides:
+
+- Client chatbot communication
+- Internal agent communication
+- Secure A2A routing
+- Task delegation
+- Clarification handling
+- Approval workflow
+- Proposal generation
+
+The contracts defined here are sufficient to implement the FastAPI backend for the PoC.

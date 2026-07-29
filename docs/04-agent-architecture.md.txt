@@ -1,0 +1,997 @@
+# Agent Architecture
+
+## 1. Overview
+
+Every AI agent in this Proof of Concept follows the same runtime architecture.
+
+Instead of hardcoded business logic, each agent follows a reasoning loop:
+
+```text
+Goal
+
+↓
+
+Load Context
+
+↓
+
+Load Memory
+
+↓
+
+Reason (Llama)
+
+↓
+
+Create Plan
+
+↓
+
+Select Tool
+
+↓
+
+Execute Action
+
+↓
+
+Update Memory
+
+↓
+
+Respond
+```
+
+Each agent is autonomous within its assigned responsibility.
+
+The Project Manager Agent acts as the orchestrator, while the remaining agents are specialists.
+
+---
+
+# 2. Agent Runtime
+
+Every agent contains the following components.
+
+```text
+                 Agent
+
+                   │
+
+        ┌──────────┴──────────┐
+
+        ▼                     ▼
+
+      Goal                 Memory
+
+        │                     │
+
+        └──────────┬──────────┘
+
+                   ▼
+
+              Llama Reasoner
+
+                   │
+
+              Planner
+
+                   │
+
+            Tool Selection
+
+                   │
+
+          Tool Execution
+
+                   │
+
+            Update Memory
+
+                   │
+
+             Return Result
+```
+
+---
+
+# 3. Common Agent Components
+
+Every agent shares these capabilities.
+
+## Identity
+
+Example
+
+```text
+Agent Name
+
+Project Manager Agent
+```
+
+---
+
+## Goal
+
+Defines what the agent is currently trying to accomplish.
+
+Example
+
+```text
+Generate project execution plan.
+```
+
+---
+
+## Memory
+
+Each agent maintains:
+
+### Short-Term Memory
+
+Current task
+
+Current conversation
+
+Current reasoning
+
+---
+
+### Project Memory
+
+Requirements
+
+Tasks
+
+Decisions
+
+Previous analyses
+
+---
+
+### Semantic Memory
+
+Retrieved from pgvector
+
+Examples
+
+- Similar projects
+- Previous architecture decisions
+- Client preferences
+
+---
+
+## Planner
+
+The planner determines the next action.
+
+Example
+
+```text
+Need more information?
+
+↓
+
+Yes
+
+↓
+
+Ask Client Agent
+
+↓
+
+Wait
+
+↓
+
+Continue
+```
+
+---
+
+## Llama Reasoner
+
+Responsible for
+
+- Understanding requirements
+- Identifying gaps
+- Summarizing
+- Suggesting
+- Planning
+
+The Llama model never stores memory.
+
+Memory is always supplied in the prompt.
+
+---
+
+## Tools
+
+Each agent has access only to the tools required for its role.
+
+Example
+
+```text
+Read Project
+
+Read Tasks
+
+Read Memory
+
+Search pgvector
+
+Save Result
+
+Send Message
+
+Generate Summary
+```
+
+---
+
+# 4. Client Agent
+
+## Purpose
+
+Acts as the client's AI representative.
+
+This is the only AI agent directly visible to the user.
+
+---
+
+## Responsibilities
+
+- Review submitted projects
+- Analyze requirements
+- Start conversations
+- Ask follow-up questions
+- Maintain chat history
+- Communicate with PM Agent
+- Answer PM clarification requests
+- Present project summary
+- Receive client approval
+
+---
+
+## Input
+
+- Requirement Form
+- Client Messages
+- PM Requests
+
+---
+
+## Output
+
+- Chat Responses
+- Requirement Package
+- Clarification Responses
+- Approval Status
+
+---
+
+## Memory
+
+Stores
+
+- Chat history
+- Project requirements
+- Client preferences
+- Clarification answers
+
+---
+
+## Tools
+
+```text
+Read Project
+
+Read Chat
+
+Read Memory
+
+Search pgvector
+
+Send Gateway Message
+
+Save Chat
+
+Update Memory
+
+Generate Summary
+```
+
+---
+
+## Reasoning Example
+
+```text
+Client asks
+
+↓
+
+Read Project
+
+↓
+
+Read Memory
+
+↓
+
+Reason
+
+↓
+
+Need clarification?
+
+↓
+
+Yes
+
+↓
+
+Ask Client
+
+↓
+
+Save Answer
+```
+
+---
+
+# 5. Project Manager Agent
+
+## Purpose
+
+The Project Manager Agent is the orchestrator of the Company Network.
+
+It coordinates all specialist agents.
+
+---
+
+## Responsibilities
+
+- Receive project requests
+- Build execution plan
+- Create tasks
+- Delegate work
+- Monitor progress
+- Merge responses
+- Identify missing information
+- Generate summary
+- Approve summary
+- Generate proposal
+
+---
+
+## Input
+
+Requirement Package
+
+---
+
+## Output
+
+- Agent Tasks
+- Clarification Requests
+- Requirement Summary
+- Proposal
+
+---
+
+## Memory
+
+Stores
+
+- Execution Plan
+- Task Status
+- Agent Results
+- Summary
+
+---
+
+## Tools
+
+```text
+Read Project
+
+Create Tasks
+
+Assign Tasks
+
+Read Agent Results
+
+Search pgvector
+
+Merge Responses
+
+Generate Summary
+
+Generate Proposal
+
+Gateway Communication
+```
+
+---
+
+## PM Decision Flow
+
+```text
+Receive Request
+
+↓
+
+Analyze
+
+↓
+
+Plan
+
+↓
+
+Create Tasks
+
+↓
+
+Wait for Results
+
+↓
+
+Merge
+
+↓
+
+Need Clarification?
+
+↓
+
+Yes
+
+↓
+
+Ask Client Agent
+
+↓
+
+Continue
+
+↓
+
+Generate Summary
+```
+
+---
+
+# 6. Business Analyst Agent
+
+## Purpose
+
+Analyze business requirements.
+
+---
+
+## Responsibilities
+
+- Requirement analysis
+- User story extraction
+- Functional requirements
+- Requirement gap analysis
+
+---
+
+## Input
+
+Project Requirements
+
+---
+
+## Output
+
+Business Analysis Report
+
+---
+
+## Memory
+
+Stores
+
+Requirement observations
+
+---
+
+## Tools
+
+```text
+Read Project
+
+Read Requirements
+
+Search Similar Projects
+
+Save Analysis
+```
+
+---
+
+## Example Output
+
+```text
+Functional Requirements
+
+Admin Portal
+
+Customer Login
+
+Restaurant Dashboard
+
+Order Tracking
+
+Notification Service
+```
+
+---
+
+# 7. Technical Agent
+
+## Purpose
+
+Design the technical solution.
+
+---
+
+## Responsibilities
+
+- Recommend architecture
+- Recommend technology stack
+- Database selection
+- API strategy
+- Integration review
+
+---
+
+## Input
+
+Business Analysis
+
+Project Requirements
+
+---
+
+## Output
+
+Technical Design
+
+---
+
+## Tools
+
+```text
+Read Project
+
+Read BA Analysis
+
+Search Architecture Memory
+
+Generate Recommendation
+```
+
+---
+
+## Example Output
+
+```text
+Frontend
+
+React
+
+Backend
+
+FastAPI
+
+Database
+
+PostgreSQL
+
+Notifications
+
+Firebase
+
+Payments
+
+Stripe
+```
+
+---
+
+# 8. Cost Agent
+
+## Purpose
+
+Estimate project cost.
+
+---
+
+## Responsibilities
+
+- Resource estimation
+- Cost estimation
+- Team size
+- Development effort
+
+---
+
+## Output
+
+Cost Estimate
+
+---
+
+## Example
+
+```text
+Developers
+
+3
+
+QA
+
+1
+
+Designer
+
+1
+
+Estimated Cost
+
+$45,000
+```
+
+---
+
+# 9. Timeline Agent
+
+## Purpose
+
+Estimate project duration.
+
+---
+
+## Responsibilities
+
+- Sprint planning
+- Milestones
+- Delivery estimation
+
+---
+
+## Output
+
+Timeline
+
+---
+
+## Example
+
+```text
+Sprint 1
+
+Authentication
+
+Sprint 2
+
+Ordering
+
+Sprint 3
+
+Payments
+
+Sprint 4
+
+Deployment
+```
+
+---
+
+# 10. Risk Agent
+
+## Purpose
+
+Identify project risks.
+
+---
+
+## Responsibilities
+
+- Technical Risks
+- Business Risks
+- Timeline Risks
+- Mitigation Plans
+
+---
+
+## Output
+
+Risk Assessment
+
+---
+
+## Example
+
+```text
+Risk
+
+Third-party API delays
+
+Mitigation
+
+Mock integrations until API access is available.
+```
+
+---
+
+# 11. Agent Communication
+
+Only specific communication paths are allowed.
+
+```text
+Client
+
+↓
+
+Client Agent
+
+↓
+
+Gateway
+
+↓
+
+PM Agent
+
+↓
+
+Specialist Agents
+```
+
+Specialist agents never communicate directly with:
+
+- Client
+- Gateway
+- Other specialist agents
+
+All communication goes through the PM Agent.
+
+---
+
+# 12. Agent Lifecycle
+
+Every agent follows the same lifecycle.
+
+```text
+Idle
+
+↓
+
+Receive Task
+
+↓
+
+Load Context
+
+↓
+
+Retrieve Memory
+
+↓
+
+Reason
+
+↓
+
+Generate Output
+
+↓
+
+Save Output
+
+↓
+
+Completed
+```
+
+---
+
+# 13. Agent Memory Strategy
+
+## PostgreSQL
+
+Stores
+
+- Tasks
+- Messages
+- Agent State
+- Project Data
+
+---
+
+## pgvector
+
+Stores
+
+- Requirement summaries
+- Decisions
+- Architecture summaries
+- Proposal summaries
+
+---
+
+## Llama Context
+
+Prompt contains
+
+```text
+Goal
+
+Current Task
+
+Project Summary
+
+Recent Chat
+
+Relevant Semantic Memory
+
+Agent Instructions
+```
+
+---
+
+# 14. Agent States
+
+Every agent has one of the following states.
+
+```text
+IDLE
+
+READY
+
+RUNNING
+
+WAITING
+
+COMPLETED
+
+FAILED
+```
+
+Example
+
+```text
+PM Agent
+
+RUNNING
+
+↓
+
+Waiting for Cost Agent
+
+↓
+
+WAITING
+```
+
+---
+
+# 15. Task Lifecycle
+
+```text
+Created
+
+↓
+
+Assigned
+
+↓
+
+Running
+
+↓
+
+Completed
+
+↓
+
+Reviewed
+
+↓
+
+Merged
+```
+
+Only the PM Agent creates and closes tasks.
+
+---
+
+# 16. Prompt Structure
+
+Every agent receives a structured prompt.
+
+```text
+System Prompt
+
+↓
+
+Agent Identity
+
+↓
+
+Current Goal
+
+↓
+
+Project Summary
+
+↓
+
+Conversation Summary
+
+↓
+
+Relevant Memory
+
+↓
+
+Current Task
+
+↓
+
+Expected Output
+
+↓
+
+Generate Response
+```
+
+This keeps all agents consistent while allowing different responsibilities.
+
+---
+
+# 17. Design Principles
+
+- Every agent has a single responsibility.
+- All reasoning is performed by Llama.
+- PostgreSQL stores transactional state.
+- pgvector stores semantic knowledge.
+- The PM Agent is the only orchestrator.
+- The Client Agent is the only agent exposed to the client.
+- Specialist agents never communicate directly with the client.
+- Agent outputs are persisted before being passed to the next stage.
+- Agents remain stateless between requests except for the persisted memory they retrieve.
+
+---
+
+# 18. Agent Responsibility Matrix
+
+| Agent | Primary Responsibility | Communicates With |
+|--------|------------------------|-------------------|
+| Client Agent | Client interaction, validation, gateway communication | Client, Gateway, PM Agent |
+| Project Manager Agent | Planning, orchestration, proposal generation | Gateway, Client Agent, Specialist Agents |
+| Business Analyst Agent | Requirement analysis | PM Agent |
+| Technical Agent | Solution architecture | PM Agent |
+| Cost Agent | Cost estimation | PM Agent |
+| Timeline Agent | Delivery planning | PM Agent |
+| Risk Agent | Risk analysis | PM Agent |
+
+---
+
+# 19. Summary
+
+The agent architecture follows a lightweight autonomous model suitable for a PoC:
+
+- A common runtime for every agent
+- Llama-based reasoning
+- PostgreSQL for persistent state
+- pgvector for semantic retrieval
+- PM Agent as the central orchestrator
+- Client Agent as the conversational interface
+- Specialist agents focused on a single domain
+
+This design keeps the implementation modular, easy to extend, and achievable within the one-week development timeline while clearly demonstrating autonomous multi-agent collaboration.

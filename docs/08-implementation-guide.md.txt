@@ -1,0 +1,1023 @@
+# Implementation Guide
+
+## 1. Overview
+
+This document defines the implementation approach for building the chatbot-based autonomous agent PoC.
+
+The goal is to complete the system within a short development timeline while maintaining the core capabilities:
+
+- Client chatbot
+- Client Agent
+- A2A Gateway
+- PM Agent orchestration
+- Specialist agents
+- Llama reasoning
+- PostgreSQL persistence
+- pgvector semantic memory
+- Proposal generation
+
+This implementation intentionally avoids enterprise complexity.
+
+---
+
+# 2. Development Approach
+
+The system will be built incrementally.
+
+Development order:
+
+```text
+Phase 1
+
+Database + Backend Foundation
+
+↓
+
+Phase 2
+
+Client Chatbot
+
+↓
+
+Phase 3
+
+Client Agent
+
+↓
+
+Phase 4
+
+A2A Gateway
+
+↓
+
+Phase 5
+
+PM Agent
+
+↓
+
+Phase 6
+
+Specialist Agents
+
+↓
+
+Phase 7
+
+Memory + pgvector
+
+↓
+
+Phase 8
+
+End-to-End Demo
+```
+
+---
+
+# 3. Technology Stack
+
+## Frontend
+
+```
+React
+TypeScript
+Tailwind CSS
+```
+
+Responsibilities:
+
+- Requirement form
+- Client chatbot UI
+- Proposal review screen
+
+---
+
+## Backend
+
+```
+Python
+
+FastAPI
+```
+
+Responsibilities:
+
+- APIs
+- Agent runtime
+- Gateway
+- Database access
+- Llama integration
+
+---
+
+## Database
+
+```
+PostgreSQL
+```
+
+Used for:
+
+- Users
+- Projects
+- Messages
+- Tasks
+- Agent state
+- Proposal
+
+---
+
+## Vector Database
+
+```
+pgvector
+```
+
+Used for:
+
+- Semantic memory
+- Requirement retrieval
+- Decision retrieval
+
+---
+
+## AI Model
+
+```
+Llama
+```
+
+Used for:
+
+- Reasoning
+- Planning
+- Summarization
+- Requirement analysis
+
+---
+
+# 4. Project Structure
+
+Recommended PoC structure:
+
+```
+a2a-chatbot-poc/
+
+│
+├── client-network/
+│
+│   ├── api/
+│   ├── agents/
+│   ├── services/
+│   └── prompts/
+│
+│
+├── company-network/
+│
+│   ├── api/
+│   ├── agents/
+│   │
+│   ├── pm/
+│   ├── ba/
+│   ├── technical/
+│   ├── cost/
+│   ├── timeline/
+│   └── risk/
+│
+│
+├── gateway/
+│
+│   ├── routes/
+│   ├── middleware/
+│   └── services/
+│
+│
+├── agent-runtime/
+│
+│   ├── base_agent.py
+│   ├── memory.py
+│   ├── planner.py
+│   ├── llm.py
+│   └── tools.py
+│
+│
+├── database/
+│
+│   ├── models/
+│   ├── migrations/
+│   └── connection.py
+│
+│
+├── shared/
+│
+│   ├── schemas/
+│   ├── constants/
+│   └── utils/
+│
+│
+├── frontend/
+│
+│   ├── client-chat/
+│   ├── forms/
+│   └── proposal/
+│
+│
+└── docs/
+```
+
+---
+
+# 5. Backend Modules
+
+## Client Network
+
+Responsible for client-side experience.
+
+Contains:
+
+```
+Client API
+
+Client Agent
+
+Client Memory
+
+Chat Service
+```
+
+---
+
+## Company Network
+
+Responsible for project analysis.
+
+Contains:
+
+```
+PM Agent
+
+BA Agent
+
+Technical Agent
+
+Cost Agent
+
+Timeline Agent
+
+Risk Agent
+```
+
+---
+
+## Gateway
+
+Responsible for:
+
+- Authentication
+- Message routing
+- Logging
+
+Does NOT contain:
+
+- Agent logic
+- Business rules
+- LLM calls
+
+---
+
+# 6. Agent Runtime Implementation
+
+All agents inherit from a common base class.
+
+Example:
+
+```python
+class BaseAgent:
+
+    def __init__(
+        self,
+        name,
+        goal,
+        memory,
+        llm,
+        tools
+    ):
+        self.name = name
+        self.goal = goal
+        self.memory = memory
+        self.llm = llm
+        self.tools = tools
+```
+
+---
+
+# 7. Base Agent Flow
+
+Every agent executes:
+
+```python
+def execute(task):
+
+    context = memory.retrieve(task)
+
+    prompt = build_prompt(
+        task,
+        context
+    )
+
+    response = llm.generate(prompt)
+
+    memory.save(response)
+
+    return response
+```
+
+---
+
+# 8. Llama Integration
+
+Create a common Llama client.
+
+Example:
+
+```python
+class LlamaClient:
+
+    def generate(prompt):
+
+        response = model.generate(
+            prompt
+        )
+
+        return response
+```
+
+---
+
+Agents never directly call Llama.
+
+Flow:
+
+```
+Agent
+
+↓
+
+LLM Client
+
+↓
+
+Llama
+
+↓
+
+Agent
+```
+
+---
+
+# 9. Client Agent Implementation
+
+## Responsibilities
+
+```
+Receive Requirement
+
+↓
+
+Analyze
+
+↓
+
+Chat With Client
+
+↓
+
+Maintain Memory
+
+↓
+
+Communicate With Gateway
+```
+
+---
+
+## Required Tools
+
+```text
+get_project()
+
+save_message()
+
+search_memory()
+
+send_gateway_message()
+
+create_summary()
+```
+
+---
+
+## Client Agent Loop
+
+```text
+User Message
+
+↓
+
+Save Message
+
+↓
+
+Retrieve Context
+
+↓
+
+Llama Reasoning
+
+↓
+
+Generate Response
+
+↓
+
+Save Response
+
+```
+
+---
+
+# 10. PM Agent Implementation
+
+The PM Agent is the orchestrator.
+
+---
+
+## Flow
+
+```text
+Receive Project
+
+↓
+
+Analyze Requirement
+
+↓
+
+Create Plan
+
+↓
+
+Create Tasks
+
+↓
+
+Assign Agents
+
+↓
+
+Collect Results
+
+↓
+
+Generate Summary
+```
+
+---
+
+## Required Tools
+
+```text
+create_task()
+
+assign_agent()
+
+collect_results()
+
+ask_client()
+
+generate_summary()
+
+generate_proposal()
+```
+
+---
+
+# 11. Specialist Agent Implementation
+
+All specialists follow the same structure.
+
+Example:
+
+```python
+class TechnicalAgent(BaseAgent):
+
+    goal = """
+    Design technical architecture
+    """
+```
+
+---
+
+## BA Agent
+
+Input:
+
+Requirements
+
+Output:
+
+Business Analysis
+
+---
+
+## Technical Agent
+
+Input:
+
+BA Analysis
+
+Output:
+
+Architecture
+
+---
+
+## Cost Agent
+
+Input:
+
+Requirements
+
+Output:
+
+Estimate
+
+---
+
+## Timeline Agent
+
+Input:
+
+Features
+
+Output:
+
+Milestones
+
+---
+
+## Risk Agent
+
+Input:
+
+Project Details
+
+Output:
+
+Risk Report
+
+---
+
+# 12. Database Implementation Order
+
+Create tables in this order:
+
+```
+users
+
+↓
+
+projects
+
+↓
+
+project_requirements
+
+↓
+
+chat_sessions
+
+↓
+
+chat_messages
+
+↓
+
+agent_sessions
+
+↓
+
+agent_tasks
+
+↓
+
+agent_memory
+
+↓
+
+project_decisions
+
+↓
+
+proposals
+
+↓
+
+approvals
+```
+
+---
+
+# 13. Chat Implementation
+
+## Client Chat
+
+Frontend:
+
+```
+Client Chat UI
+
+↓
+
+POST /chat/message
+
+↓
+
+Client Agent
+
+↓
+
+Response
+```
+
+---
+
+## Internal Agent Chat
+
+Not visible.
+
+Flow:
+
+```
+Client Agent
+
+↓
+
+Gateway
+
+↓
+
+PM Agent
+```
+
+---
+
+# 14. A2A Gateway Implementation
+
+Gateway endpoints:
+
+```
+POST /gateway/message
+
+GET /gateway/logs
+```
+
+---
+
+Gateway processing:
+
+```text
+Receive Message
+
+↓
+
+Validate Token
+
+↓
+
+Validate Sender
+
+↓
+
+Save Log
+
+↓
+
+Route Message
+
+↓
+
+Return Response
+```
+
+---
+
+# 15. Memory Implementation
+
+## Phase 1
+
+Simple PostgreSQL memory.
+
+Store:
+
+- Messages
+- Summaries
+- Decisions
+
+---
+
+## Phase 2
+
+Add pgvector.
+
+Install:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+---
+
+Embedding flow:
+
+```
+Important Information
+
+↓
+
+Embedding Generator
+
+↓
+
+pgvector
+
+↓
+
+Similarity Search
+```
+
+---
+
+# 16. Llama Prompt Flow
+
+Example:
+
+```
+SYSTEM:
+
+You are a Business Analyst Agent.
+
+
+GOAL:
+
+Analyze software requirements.
+
+
+PROJECT:
+
+Food Delivery Platform.
+
+
+MEMORY:
+
+Previous requirements.
+
+
+TASK:
+
+Identify missing requirements.
+
+
+OUTPUT:
+
+Return structured JSON.
+```
+
+---
+
+# 17. One Week Development Plan
+
+## Day 1
+
+Foundation
+
+Complete:
+
+- Project setup
+- PostgreSQL
+- Models
+- Authentication
+
+---
+
+## Day 2
+
+Client Network
+
+Complete:
+
+- Requirement form
+- Client chat UI
+- Client Agent
+
+---
+
+## Day 3
+
+A2A Gateway
+
+Complete:
+
+- Message routing
+- Validation
+- Logging
+
+---
+
+## Day 4
+
+Company Network
+
+Complete:
+
+- PM Agent
+- BA Agent
+- Technical Agent
+
+---
+
+## Day 5
+
+Remaining Agents
+
+Complete:
+
+- Cost Agent
+- Timeline Agent
+- Risk Agent
+
+---
+
+## Day 6
+
+Memory
+
+Complete:
+
+- Agent memory
+- pgvector
+- Retrieval
+
+---
+
+## Day 7
+
+Demo Preparation
+
+Complete:
+
+- End-to-end testing
+- Proposal flow
+- Bug fixes
+
+---
+
+# 18. Testing Strategy
+
+## Unit Testing
+
+Test:
+
+- Agent tools
+- Database operations
+- API endpoints
+
+---
+
+## Integration Testing
+
+Test:
+
+```
+Client
+
+↓
+
+Client Agent
+
+↓
+
+Gateway
+
+↓
+
+PM Agent
+
+↓
+
+Specialists
+
+↓
+
+Proposal
+```
+
+---
+
+## Demo Testing
+
+Scenario:
+
+```
+Submit Requirement
+
+↓
+
+Chat
+
+↓
+
+Clarification
+
+↓
+
+Agent Analysis
+
+↓
+
+Summary Approval
+
+↓
+
+Proposal
+```
+
+---
+
+# 19. PoC Simplifications
+
+To finish quickly:
+
+## Use
+
+- Single PostgreSQL database
+- Single FastAPI application initially
+- Simple REST communication
+- Local Llama instance/API
+- JSON-based messages
+
+---
+
+## Avoid
+
+- Kafka
+- RabbitMQ
+- Kubernetes
+- Vector DB servers
+- Workflow engines
+- Complex authentication
+
+---
+
+# 20. Final Implementation Goal
+
+The completed PoC should demonstrate:
+
+```
+Client
+
+↓
+
+Chatbot
+
+↓
+
+Client Agent
+
+↓
+
+A2A Gateway
+
+↓
+
+PM Agent
+
+↓
+
+Specialist Agents
+
+↓
+
+Proposal
+
+↓
+
+Client Approval
+```
+
+The focus is not infrastructure.
+
+The focus is proving that autonomous agents can communicate, reason, collaborate, and complete a business workflow through natural conversation.

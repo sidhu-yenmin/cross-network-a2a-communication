@@ -1,0 +1,811 @@
+# Database Design
+
+## 1. Overview
+
+The chatbot-based A2A PoC uses **PostgreSQL** as the primary database for all transactional data.
+
+PostgreSQL stores:
+
+- Users
+- Projects
+- Requirements
+- Chat Sessions
+- Chat Messages
+- Agent Sessions
+- Agent Tasks
+- Proposals
+- Approvals
+- Gateway Logs
+
+Unlike many AI applications, **chat messages are NOT stored in the vector database**.
+
+Only summarized knowledge is embedded into pgvector.
+
+---
+
+# 2. Database Architecture
+
+```text
+                   PostgreSQL
+
+        +------------------------------+
+
+        Users
+
+        Projects
+
+        Requirements
+
+        Chat Sessions
+
+        Chat Messages
+
+        Agent Sessions
+
+        Agent Tasks
+
+        Proposal
+
+        Approvals
+
+        Gateway Logs
+
+        Agent Memory
+
+        +------------------------------+
+
+                 │
+
+                 ▼
+
+            pgvector Extension
+
+                 │
+
+                 ▼
+
+      Requirement Embeddings
+
+      Decision Embeddings
+
+      Proposal Embeddings
+```
+
+---
+
+# 3. Database Relationships
+
+```text
+Users
+ │
+ │ 1
+ │
+ └──────────────∞
+
+Projects
+
+ │
+
+ ├──────────────∞ Requirements
+
+ │
+
+ ├──────────────∞ Chat Sessions
+
+ │
+
+ ├──────────────∞ Agent Sessions
+
+ │
+
+ ├──────────────∞ Agent Tasks
+
+ │
+
+ ├──────────────∞ Proposal
+
+ │
+
+ ├──────────────∞ Approvals
+
+ │
+
+ └──────────────∞ Agent Memory
+```
+
+---
+
+# 4. Table : users
+
+Stores registered users.
+
+```sql
+users
+
+id UUID PRIMARY KEY
+
+username
+
+email
+
+password_hash
+
+role
+
+created_at
+
+updated_at
+```
+
+Role
+
+```text
+CLIENT
+
+PM
+
+ADMIN
+```
+
+---
+
+# 5. Table : projects
+
+Stores every submitted software project.
+
+```sql
+projects
+
+id UUID PRIMARY KEY
+
+created_by
+
+project_name
+
+description
+
+target_platforms
+
+target_audience
+
+budget
+
+timeline
+
+status
+
+created_at
+
+updated_at
+```
+
+Status
+
+```text
+NEW
+
+ANALYZING
+
+UNDER_ANALYSIS
+
+WAITING_CLIENT
+
+WAITING_PM_APPROVAL
+
+WAITING_CLIENT_APPROVAL
+
+PROPOSAL_READY
+
+COMPLETED
+```
+
+---
+
+# 6. Table : project_requirements
+
+Stores the original requirement form.
+
+```sql
+project_requirements
+
+id UUID PRIMARY KEY
+
+project_id
+
+key_features JSONB
+
+third_party_integrations JSONB
+
+attachments JSONB
+
+notes
+
+created_at
+```
+
+Example
+
+```json
+{
+  "features":[
+      "Authentication",
+      "Payment",
+      "Tracking"
+  ]
+}
+```
+
+---
+
+# 7. Table : chat_sessions
+
+Every chatbot conversation creates one session.
+
+There are only two types.
+
+```sql
+chat_sessions
+
+id UUID PRIMARY KEY
+
+project_id
+
+session_type
+
+status
+
+created_at
+
+updated_at
+```
+
+Session Type
+
+```text
+CLIENT_CHAT
+
+PM_CHAT
+```
+
+Example
+
+```text
+Session 1
+
+Client
+
+↓
+
+Client Agent
+
+----------------
+
+Session 2
+
+Client Agent
+
+↓
+
+PM Agent
+```
+
+---
+
+# 8. Table : chat_messages
+
+Stores every message.
+
+```sql
+chat_messages
+
+id UUID PRIMARY KEY
+
+session_id
+
+sender
+
+receiver
+
+message
+
+message_type
+
+metadata JSONB
+
+created_at
+```
+
+Sender examples
+
+```text
+USER
+
+CLIENT_AGENT
+
+PM_AGENT
+
+SYSTEM
+```
+
+Message Types
+
+```text
+TEXT
+
+QUESTION
+
+SUMMARY
+
+APPROVAL
+
+SYSTEM
+```
+
+---
+
+# 9. Table : agent_sessions
+
+Every agent gets its own working session.
+
+```sql
+agent_sessions
+
+id UUID PRIMARY KEY
+
+project_id
+
+agent_name
+
+goal
+
+current_step
+
+status
+
+started_at
+
+completed_at
+```
+
+Example
+
+```text
+Project
+
+Food Delivery App
+
+Agent
+
+PM
+
+Goal
+
+Generate Proposal
+
+Current Step
+
+Waiting for Timeline
+```
+
+---
+
+# 10. Table : agent_tasks
+
+PM creates tasks for specialist agents.
+
+```sql
+agent_tasks
+
+id UUID PRIMARY KEY
+
+project_id
+
+agent_name
+
+task_name
+
+goal
+
+status
+
+input_context
+
+result
+
+created_at
+
+completed_at
+```
+
+Status
+
+```text
+CREATED
+
+ASSIGNED
+
+RUNNING
+
+COMPLETED
+
+FAILED
+```
+
+---
+
+# 11. Table : proposals
+
+Stores generated proposal.
+
+```sql
+proposals
+
+id UUID PRIMARY KEY
+
+project_id
+
+summary
+
+estimated_cost
+
+estimated_timeline
+
+technology_stack
+
+proposal_document
+
+status
+
+created_at
+```
+
+Status
+
+```text
+DRAFT
+
+PM_APPROVED
+
+CLIENT_APPROVED
+
+FINAL
+```
+
+---
+
+# 12. Table : approvals
+
+Tracks approvals.
+
+```sql
+approvals
+
+id UUID PRIMARY KEY
+
+project_id
+
+approved_by
+
+approval_type
+
+remarks
+
+approved_at
+```
+
+Approval Type
+
+```text
+PM
+
+CLIENT
+```
+
+---
+
+# 13. Table : agent_memory
+
+Stores structured memory.
+
+Not vector memory.
+
+```sql
+agent_memory
+
+id UUID PRIMARY KEY
+
+project_id
+
+agent_name
+
+memory_type
+
+memory
+
+created_at
+```
+
+Memory Types
+
+```text
+PROJECT
+
+DECISION
+
+SUMMARY
+
+CLIENT_PREFERENCE
+
+OBSERVATION
+```
+
+Example
+
+```text
+Client prefers Stripe.
+
+Client prefers PostgreSQL.
+
+Client requires Admin Portal.
+```
+
+---
+
+# 14. Table : gateway_logs
+
+Tracks every communication.
+
+```sql
+gateway_logs
+
+id UUID PRIMARY KEY
+
+project_id
+
+sender_agent
+
+receiver_agent
+
+message_type
+
+status
+
+created_at
+```
+
+Useful for debugging.
+
+---
+
+# 15. Project Lifecycle
+
+```text
+Project Created
+
+↓
+
+Requirement Saved
+
+↓
+
+Client Chat Created
+
+↓
+
+PM Chat Created
+
+↓
+
+Agent Tasks Created
+
+↓
+
+Proposal Generated
+
+↓
+
+Approvals
+
+↓
+
+Completed
+```
+
+---
+
+# 16. Chat Lifecycle
+
+```text
+Client
+
+↓
+
+Chat Session
+
+↓
+
+Messages
+
+↓
+
+Summary
+
+↓
+
+Approval
+
+↓
+
+Closed
+```
+
+---
+
+# 17. Agent Task Lifecycle
+
+```text
+Created
+
+↓
+
+Assigned
+
+↓
+
+Running
+
+↓
+
+Completed
+
+↓
+
+Reviewed
+
+↓
+
+Merged
+```
+
+---
+
+# 18. Suggested Indexes
+
+## projects
+
+```sql
+project_name
+
+status
+
+created_by
+```
+
+---
+
+## chat_messages
+
+```sql
+session_id
+
+created_at
+```
+
+---
+
+## agent_tasks
+
+```sql
+project_id
+
+agent_name
+
+status
+```
+
+---
+
+## proposals
+
+```sql
+project_id
+```
+
+---
+
+## agent_memory
+
+```sql
+project_id
+
+agent_name
+
+memory_type
+```
+
+---
+
+# 19. Database Workflow
+
+```text
+Requirement Form
+
+↓
+
+projects
+
+↓
+
+project_requirements
+
+↓
+
+chat_sessions
+
+↓
+
+chat_messages
+
+↓
+
+agent_tasks
+
+↓
+
+agent_memory
+
+↓
+
+proposal
+
+↓
+
+approvals
+```
+
+---
+
+# 20. Why PostgreSQL?
+
+PostgreSQL is sufficient for this PoC because it provides:
+
+- ACID-compliant transactions
+- JSONB support for flexible data
+- Native UUID support
+- Excellent indexing
+- Easy integration with FastAPI and SQLAlchemy
+- Support for the pgvector extension in the same database
+
+Using PostgreSQL avoids introducing additional infrastructure while keeping the design simple and maintainable.
+
+---
+
+# 21. Database Summary
+
+| Table | Purpose |
+|--------|---------|
+| users | Registered users |
+| projects | Project metadata |
+| project_requirements | Initial requirement form |
+| chat_sessions | Two chatbot conversations |
+| chat_messages | Conversation history |
+| agent_sessions | Agent execution state |
+| agent_tasks | PM task delegation |
+| agent_memory | Structured agent memory |
+| proposals | Generated proposal |
+| approvals | PM and Client approvals |
+| gateway_logs | A2A communication logs |
+
+---
+
+# 22. Next Document
+
+The next document explains:
+
+- Agent memory architecture
+- pgvector
+- Embedding strategy
+- Retrieval flow
+- Conversation memory
+- Semantic search
+- Llama context construction

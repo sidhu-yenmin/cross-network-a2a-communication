@@ -1,0 +1,1237 @@
+# End-to-End Demo Workflow
+
+## 1. Overview
+
+This document describes the complete demonstration flow of the autonomous chatbot-based A2A system.
+
+The demo showcases:
+
+- Client requirement submission
+- Client Agent analysis
+- Client chatbot conversation
+- Cross-network communication
+- PM Agent orchestration
+- Specialist agent collaboration
+- Clarification handling
+- Summary approval
+- Proposal generation
+
+The objective is to demonstrate how independent AI agents collaborate without direct human coordination.
+
+---
+
+# 2. Demo Scenario
+
+## Project
+
+```
+Food Delivery Platform
+```
+
+---
+
+## Client Requirement
+
+The client wants to build a food delivery application.
+
+Initial requirement form:
+
+```json
+{
+  "project_name":
+  "Food Delivery Platform",
+
+  "description":
+  "A mobile and web application for ordering food from restaurants",
+
+  "target_platforms":
+  [
+    "Android",
+    "iOS",
+    "Web"
+  ],
+
+  "target_audience":
+  [
+    "Customers",
+    "Restaurants",
+    "Delivery Partners"
+  ],
+
+  "timeline":
+  "4 months",
+
+  "budget":
+  "$40000",
+
+  "key_features":
+  [
+    "User Registration",
+    "Restaurant Listing",
+    "Food Ordering",
+    "Payment",
+    "Delivery Tracking"
+  ],
+
+  "integrations":
+  [
+    "Stripe",
+    "Google Maps"
+  ]
+}
+```
+
+---
+
+# 3. Step 1 - Project Creation
+
+## User Action
+
+Client submits the requirement form.
+
+---
+
+## System Actions
+
+```text
+Frontend
+
+↓
+
+Client Backend
+
+↓
+
+Validate Request
+
+↓
+
+Create Project
+
+↓
+
+Create Chat Session
+
+↓
+
+Redirect To Chat
+```
+
+---
+
+## Database Changes
+
+### projects
+
+Created:
+
+```
+id:
+
+P001
+
+
+name:
+
+Food Delivery Platform
+
+
+status:
+
+NEW
+```
+
+---
+
+### project_requirements
+
+Created:
+
+```
+Features:
+
+Authentication
+
+Payment
+
+Tracking
+
+
+Integrations:
+
+Stripe
+
+Google Maps
+```
+
+---
+
+### chat_sessions
+
+Created:
+
+```
+session_type:
+
+CLIENT_CHAT
+```
+
+---
+
+# 4. Step 2 - Client Agent Starts Conversation
+
+The Client Agent automatically analyzes the submitted requirement.
+
+---
+
+## Internal Processing
+
+```text
+Load Project
+
+↓
+
+Load Requirements
+
+↓
+
+Retrieve Memory
+
+↓
+
+Generate Llama Prompt
+
+↓
+
+Analyze Requirement
+
+↓
+
+Generate Response
+```
+
+---
+
+## Client Chat
+
+Client sees:
+
+```
+Client Agent:
+
+Hi John,
+
+I have reviewed your Food Delivery Platform requirements.
+
+The project scope is clear and includes customer applications, restaurant management, and delivery tracking.
+
+I noticed a few areas that need clarification before we start technical analysis.
+
+Could you confirm:
+
+1. Do you require separate applications for customers, restaurants, and delivery partners?
+
+2. Should delivery partners have real-time GPS tracking?
+
+3. Do you already have a preferred payment provider?
+```
+
+---
+
+# 5. Step 3 - Client Responds
+
+Client:
+
+```
+Yes, we need separate applications.
+
+Delivery partners should have GPS tracking.
+
+We prefer Stripe for payments.
+```
+
+---
+
+## Client Agent Processing
+
+```text
+Receive Message
+
+↓
+
+Save Chat
+
+↓
+
+Update Memory
+
+↓
+
+Create Decisions
+
+↓
+
+Generate Embeddings
+
+↓
+
+Continue Analysis
+```
+
+---
+
+## Database Update
+
+### chat_messages
+
+New record:
+
+```
+sender:
+
+USER
+
+
+message:
+
+"We prefer Stripe for payments."
+```
+
+---
+
+### project_decisions
+
+Created:
+
+```
+decision_type:
+
+PAYMENT
+
+
+decision:
+
+Stripe
+```
+
+---
+
+### pgvector
+
+Embedding created:
+
+```
+Client selected Stripe payment provider.
+```
+
+---
+
+# 6. Step 4 - Client Agent Sends Project Request
+
+Client Agent determines requirements are complete.
+
+Creates A2A request.
+
+---
+
+## Message
+
+```json
+{
+ "message_type":
+ "PROJECT_REQUEST",
+
+ "sender":
+ "CLIENT_AGENT",
+
+ "receiver":
+ "PM_AGENT",
+
+ "project_id":
+ "P001",
+
+ "payload":
+ {
+   "summary":
+   "Food delivery platform with customer, restaurant and delivery applications",
+
+   "requirements":
+   [
+    "Mobile applications",
+    "Restaurant management",
+    "GPS tracking",
+    "Stripe payment"
+   ]
+ }
+}
+```
+
+---
+
+## Communication
+
+```
+Client Agent
+
+↓
+
+A2A Gateway
+
+↓
+
+PM Agent
+```
+
+---
+
+# 7. Step 5 - PM Agent Receives Request
+
+PM Agent starts execution.
+
+---
+
+## PM Reasoning
+
+```text
+Understand Requirement
+
+↓
+
+Create Execution Plan
+
+↓
+
+Identify Required Analysis
+
+↓
+
+Create Tasks
+```
+
+---
+
+## Project Status
+
+Updated:
+
+```
+UNDER_ANALYSIS
+```
+
+---
+
+# 8. Step 6 - PM Creates Tasks
+
+PM creates:
+
+---
+
+## Task 1
+
+Business Analysis
+
+Assigned:
+
+```
+BA Agent
+```
+
+Goal:
+
+```
+Analyze functional requirements.
+```
+
+---
+
+## Task 2
+
+Technical Architecture
+
+Assigned:
+
+```
+Technical Agent
+```
+
+Goal:
+
+```
+Design application architecture.
+```
+
+---
+
+## Task 3
+
+Cost Estimation
+
+Assigned:
+
+```
+Cost Agent
+```
+
+Goal:
+
+```
+Estimate development cost.
+```
+
+---
+
+## Task 4
+
+Timeline Planning
+
+Assigned:
+
+```
+Timeline Agent
+```
+
+Goal:
+
+```
+Create delivery milestones.
+```
+
+---
+
+## Task 5
+
+Risk Analysis
+
+Assigned:
+
+```
+Risk Agent
+```
+
+Goal:
+
+```
+Identify project risks.
+```
+
+---
+
+# 9. Step 7 - Specialist Agent Execution
+
+Each agent independently works.
+
+---
+
+# Business Analyst Agent
+
+Input:
+
+```
+Food Delivery Platform
+```
+
+Output:
+
+```
+Functional Requirements:
+
+Customer App
+
+Restaurant App
+
+Delivery App
+
+Admin Portal
+
+
+Additional Requirements:
+
+Order Management
+
+Payment
+
+Notifications
+
+Tracking
+```
+
+---
+
+# Technical Agent
+
+Output:
+
+```
+Recommended Architecture:
+
+Frontend:
+
+React Native
+
+
+Backend:
+
+FastAPI
+
+
+Database:
+
+PostgreSQL
+
+
+Authentication:
+
+JWT
+
+
+Notifications:
+
+Firebase
+
+
+Maps:
+
+Google Maps API
+```
+
+---
+
+# Cost Agent
+
+Output:
+
+```
+Estimated Team:
+
+Backend Developer: 2
+
+Frontend Developer: 2
+
+QA Engineer: 1
+
+UI Designer: 1
+
+
+Estimated Cost:
+
+$40000
+```
+
+---
+
+# Timeline Agent
+
+Output:
+
+```
+Sprint 1:
+
+Authentication
+
+
+Sprint 2:
+
+Restaurant and Customer Modules
+
+
+Sprint 3:
+
+Payments and Tracking
+
+
+Sprint 4:
+
+Testing and Deployment
+```
+
+---
+
+# Risk Agent
+
+Output:
+
+```
+Risks:
+
+Third-party API dependency
+
+
+Mitigation:
+
+Early integration testing
+```
+
+---
+
+# 10. Step 8 - PM Collects Results
+
+PM receives:
+
+```text
+BA Result
+
++
+
+Technical Result
+
++
+
+Cost Result
+
++
+
+Timeline Result
+
++
+
+Risk Result
+```
+
+---
+
+PM evaluates:
+
+```
+Are requirements complete?
+
+↓
+
+Yes
+
+↓
+
+Generate Summary
+```
+
+---
+
+# 11. Step 9 - Clarification Example
+
+Assume PM needs additional information.
+
+PM asks:
+
+```
+Should restaurant owners manage their own menu items?
+```
+
+---
+
+## Flow
+
+```
+PM Agent
+
+↓
+
+Gateway
+
+↓
+
+Client Agent
+```
+
+---
+
+Client Agent checks memory.
+
+Search:
+
+```
+PostgreSQL
+
++
+
+pgvector
+```
+
+---
+
+Result:
+
+No previous information.
+
+---
+
+Client Agent asks:
+
+```
+Would you like restaurant owners to manage their own menus?
+```
+
+---
+
+Client:
+
+```
+Yes, each restaurant should manage their own menu.
+```
+
+---
+
+Memory update:
+
+```
+Decision:
+
+Restaurant owners manage menus.
+```
+
+---
+
+Response forwarded:
+
+```
+Client Agent
+
+↓
+
+Gateway
+
+↓
+
+PM Agent
+```
+
+---
+
+# 12. Step 10 - Requirement Summary Generation
+
+PM generates:
+
+```
+PROJECT SUMMARY
+```
+
+Content:
+
+---
+
+## Overview
+
+Food delivery platform supporting:
+
+- Customers
+- Restaurants
+- Delivery partners
+
+---
+
+## Features
+
+- User authentication
+- Restaurant management
+- Food ordering
+- Payment processing
+- GPS tracking
+
+---
+
+## Technology
+
+- React Native
+- FastAPI
+- PostgreSQL
+- Firebase
+- Google Maps
+
+---
+
+## Timeline
+
+4 Months
+
+---
+
+## Cost
+
+$40000
+
+---
+
+## Risks
+
+Third-party API dependency
+
+---
+
+# 13. Step 11 - PM Approval
+
+Status:
+
+```
+WAITING_PM_APPROVAL
+```
+
+---
+
+PM reviews:
+
+```
+Summary Accuracy
+
+↓
+
+Technical Accuracy
+
+↓
+
+Cost Accuracy
+
+↓
+
+Approve
+```
+
+---
+
+Status:
+
+```
+SUMMARY_APPROVED
+```
+
+---
+
+# 14. Step 12 - Client Review
+
+Summary sent:
+
+```
+PM Agent
+
+↓
+
+Gateway
+
+↓
+
+Client Agent
+
+↓
+
+Client Chat
+```
+
+---
+
+Client sees:
+
+```
+Your project analysis is complete.
+
+Please review the summary.
+
+Approve if everything is correct.
+```
+
+---
+
+# 15. Step 13 - Client Approval
+
+Client:
+
+```
+Approved.
+```
+
+---
+
+System updates:
+
+```
+Project Status:
+
+CLIENT_APPROVED
+```
+
+---
+
+Approval stored:
+
+```
+approval_type:
+
+CLIENT
+
+
+status:
+
+APPROVED
+```
+
+---
+
+# 16. Step 14 - Proposal Generation
+
+PM generates final proposal.
+
+---
+
+Proposal contains:
+
+```
+Project Overview
+
+Scope
+
+Features
+
+Architecture
+
+Technology Stack
+
+Development Timeline
+
+Estimated Cost
+
+Risks
+
+Assumptions
+```
+
+---
+
+Database:
+
+```
+proposals
+```
+
+Created.
+
+---
+
+# 17. Complete Sequence Diagram
+
+```text
+Client
+
+ |
+
+ | Submit Requirement
+
+ ▼
+
+Client Backend
+
+ |
+
+ ▼
+
+Client Agent
+
+ |
+
+ | Analyze
+
+ |
+
+ | Chat
+
+ |
+
+ | PROJECT_REQUEST
+
+ ▼
+
+A2A Gateway
+
+ |
+
+ ▼
+
+PM Agent
+
+ |
+
+ +------------+
+
+ |            |
+
+ ▼            ▼
+
+BA        Technical
+
+ |            |
+
+ ▼            ▼
+
+Cost     Timeline
+
+ |
+
+ ▼
+
+Risk
+
+ |
+
+ ▼
+
+PM Summary
+
+ |
+
+ ▼
+
+Approval
+
+ |
+
+ ▼
+
+Client Agent
+
+ |
+
+ ▼
+
+Client
+
+ |
+
+ ▼
+
+Proposal
+```
+
+---
+
+# 18. Final Database State
+
+## Project
+
+```
+status:
+
+COMPLETED
+```
+
+---
+
+## Messages
+
+Contains:
+
+```
+Client Conversation
+
+Agent Communication Logs
+```
+
+---
+
+## Agent Tasks
+
+All:
+
+```
+COMPLETED
+```
+
+---
+
+## Memory
+
+Contains:
+
+```
+Requirements
+
+Decisions
+
+Architecture
+
+Summary
+```
+
+---
+
+## Proposal
+
+Status:
+
+```
+FINAL
+```
+
+---
+
+# 19. Demo Success Criteria
+
+The demo is successful when:
+
+## Client Experience
+
+✓ Client interacts only with chatbot
+
+✓ Requirements are understood
+
+✓ Clarifications happen naturally
+
+✓ Final proposal is reviewed
+
+---
+
+## Agent Collaboration
+
+✓ Client Agent communicates with PM Agent
+
+✓ PM delegates tasks
+
+✓ Specialist agents complete analysis
+
+✓ Missing information is requested
+
+---
+
+## AI Capabilities
+
+✓ Llama reasoning
+
+✓ Memory retrieval
+
+✓ Semantic search
+
+✓ Autonomous planning
+
+---
+
+# 20. Final PoC Outcome
+
+The completed system demonstrates:
+
+```text
+Human Requirement
+
+↓
+
+Client Chatbot
+
+↓
+
+Client Agent
+
+↓
+
+A2A Communication
+
+↓
+
+PM Agent
+
+↓
+
+Specialist Agents
+
+↓
+
+Autonomous Collaboration
+
+↓
+
+Approved Proposal
+```
+
+This proves that independent organizational AI agents can collaborate through secure communication while maintaining a natural chatbot-based user experience.

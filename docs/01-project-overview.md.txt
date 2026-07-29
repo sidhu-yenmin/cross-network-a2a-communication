@@ -1,395 +1,651 @@
-# Cross-Network Autonomous Agent-to-Agent (A2A) Communication PoC
+# Cross-Network Autonomous Agent-to-Agent (A2A) Chatbot PoC
 
-## 1. Project Overview
+## 1. Introduction
 
-This project is a Proof of Concept (PoC) demonstrating secure **Cross-Network Agent-to-Agent (A2A) Communication** between two independent organizations:
+This project is a **Proof of Concept (PoC)** that demonstrates how autonomous AI agents belonging to independent organizations can collaborate through a secure Agent-to-Agent (A2A) communication layer while maintaining a chatbot-based user experience.
 
-1. Client Organization
-2. Software Development Company
+Unlike traditional chatbot systems where users directly interact with a single AI assistant, this PoC simulates two independent organizations:
 
-The objective is to demonstrate how autonomous AI agents can collaborate across organizational boundaries to manage the complete software project proposal lifecycle.
+- Client Organization
+- Software Development Company
 
-Instead of traditional human-to-human communication between a client and a software company, autonomous agents communicate, analyze requirements, coordinate tasks, and generate a project proposal with minimal human intervention.
+Each organization owns its own AI agents and infrastructure.
 
----
+The Client never communicates directly with the Software Company.
 
-# 2. Problem Statement
+Instead, communication occurs through autonomous AI agents connected via an A2A Gateway.
 
-Traditional software project engagement involves multiple manual steps:
+The goal is to demonstrate that independent AI agents can:
 
-- Client submits requirements
-- Project managers analyze requirements
-- Business analysts clarify missing information
-- Technical teams design solutions
-- Estimation teams calculate cost and timeline
-- Managers prepare proposals
+- Understand business requirements
+- Plan tasks
+- Delegate work
+- Communicate with other agents
+- Maintain conversational memory
+- Ask clarification questions
+- Generate project proposals
 
-This process requires significant coordination time and repeated communication.
-
-This PoC demonstrates how autonomous agents can automate this collaboration workflow while maintaining organizational separation and secure communication.
-
----
-
-# 3. PoC Vision
-
-The vision is to create a system where:
-
-- Client agents represent the client organization
-- Company agents represent the software company
-- Agents communicate through a secure A2A Gateway
-- Agents reason about tasks
-- Agents create execution plans
-- Agents request support from other agents
-- Agents use tools to complete tasks
-- Agents maintain contextual memory
-- Agents generate software project proposals autonomously
+while providing a seamless conversational experience.
 
 ---
 
-# 4. Core Concept
+# 2. Project Objective
 
-The project demonstrates:
+Build a chatbot-driven autonomous agent system where:
 
+- Client submits software requirements using a structured form.
+- Client Agent reviews the submitted requirements.
+- Client Agent starts a conversation with the client.
+- Client Agent communicates with the Company Network.
+- Project Manager Agent orchestrates requirement analysis.
+- Specialist agents independently analyze different aspects.
+- Agents collaborate through A2A communication.
+- Missing information is requested through conversational follow-up.
+- Project Manager approves the final requirement summary.
+- Client reviews and approves the summary.
+- Final proposal is generated.
 
-Human Request
+The entire process should appear as a natural conversation instead of a traditional workflow engine.
 
-  |
+---
 
-  v
+# 3. Proof of Concept Scope
+
+This project focuses only on validating autonomous agent collaboration.
+
+The PoC intentionally keeps the implementation simple.
+
+Included:
+
+- Two independent networks
+- Two chatbot interfaces
+- Autonomous agents
+- LLM-based reasoning
+- Agent memory
+- Planning
+- Tool execution
+- A2A communication
+- PostgreSQL persistence
+- pgvector semantic memory
+- Proposal generation
+
+Not Included:
+
+- Kubernetes
+- Distributed event systems
+- Microservices
+- Enterprise workflow engines
+- Multi-tenancy
+- Advanced RBAC
+- Human task management
+- Production deployment
+- High availability
+- Distributed vector databases
+
+---
+
+# 4. High-Level Architecture
+
+```
+
++------------------------------------------------------+
+| CLIENT NETWORK |
++------------------------------------------------------+
+
+Client
+
+↓
+
+Project Requirement Form
+
+↓
+
+Client Chat UI
+
+↓
+
+Client Backend
+
+↓
 
 Client Agent
 
-  |
-
-  |
+↓
 
 A2A Gateway
 
-  |
+========================================================
 
-  |
++------------------------------------------------------+
+| COMPANY NETWORK |
++------------------------------------------------------+
+
+Company Backend
+
+↓
 
 Project Manager Agent
 
-  |
+↓
 
-  +----------------+
-  |                |
-  v                v
++------------------------------+
 
-Business Analyst Technical Agent
+↓
 
-  |
+Business Analyst Agent
 
-  v
+↓
+
+Technical Agent
+
+↓
 
 Cost Agent
 
-  |
-
-  v
+↓
 
 Timeline Agent
 
-  |
-
-  v
+↓
 
 Risk Agent
 
-  |
+↓
 
-  v
+Proposal Generator
 
-Project Proposal
+```
 
+The Client Network and Company Network remain completely independent.
 
----
-
-# 5. Main Objectives
-
-The PoC should demonstrate the following capabilities:
-
-## Cross-Network Communication
-
-Two independent networks communicate securely through an A2A Gateway.
-
-Each organization maintains:
-
-- Own frontend
-- Own backend
-- Own database
-- Own authentication
-- Own AI agents
-
+The only communication path between them is the A2A Gateway.
 
 ---
 
-## Autonomous Agent Collaboration
+# 5. Chatbot-Based Architecture
 
-Agents should have:
+Instead of exposing every autonomous agent to the user, this PoC presents only two chatbot interfaces.
 
-- Goals
-- Memory
-- Planning capability
-- Reasoning capability
-- Tool usage
-- Ability to communicate with other agents
+## Chatbot 1
 
+Client ↔ Client Agent
 
----
+Visible to the user.
 
-## Requirement Understanding
+Purpose:
 
-The AI system should:
-
-- Analyze project requests
-- Identify missing information
-- Generate clarification questions
-- Summarize requirements
-- Extract functional requirements
-
+- Requirement discussion
+- Requirement validation
+- Clarification
+- Updates
+- Final review
 
 ---
 
-## Technical Analysis
+## Chatbot 2
 
-The system should automatically generate:
+Client Agent ↔ Project Manager Agent
 
-- Solution architecture
-- Technology recommendations
-- Database approach
-- API strategy
+Internal.
 
+Purpose:
+
+- Requirement analysis
+- Agent collaboration
+- Task delegation
+- Missing information requests
+- Proposal generation
+
+This chatbot is never visible to the client.
 
 ---
 
-## Estimation
+# 6. Complete Workflow
 
-The system should generate:
+## Step 1
 
-- Development effort
-- Cost estimation
-- Timeline estimation
-- Delivery milestones
+Client logs into the application.
 
+↓
+
+Client creates a new project.
+
+↓
+
+Client fills the requirement form.
+
+Example:
+
+- Project Name
+- Description
+- Target Platforms
+- Target Audience
+- Timeline
+- Budget
+- Key Features
+- Third-party Integrations
+
+↓
+
+Client clicks Submit.
+
+---
+
+## Step 2
+
+Project requirements are stored inside PostgreSQL.
+
+A new project is created.
+
+A new chat session is created.
+
+Client is redirected to the Client Chat page.
+
+---
+
+## Step 3
+
+Client Agent automatically begins processing.
+
+The Client Agent:
+
+- Reads the submitted requirements.
+- Retrieves project context.
+- Uses the Llama model to analyze the requirements.
+- Identifies missing information.
+- Generates an initial conversation.
+
+Example:
+
+"Hi John,
+
+I've reviewed your project requirements.
+
+Your project appears to be an e-commerce platform targeting Android and iOS users.
+
+I noticed that payment gateway information is missing.
+
+Do you already have a preferred payment provider?"
+
+---
+
+## Step 4
+
+If the client responds:
+
+The Client Agent:
+
+- Stores the response.
+- Updates project memory.
+- Updates semantic memory if necessary.
+- Determines whether enough information exists.
+
+If additional information is still required:
+
+Continue chatting.
+
+Otherwise:
+
+Forward the request to the Company Network.
+
+---
+
+## Step 5
+
+The Client Agent sends an A2A request.
+
+```
+
+Client Agent
+
+↓
+
+A2A Gateway
+
+↓
+
+Project Manager Agent
+
+```
+
+The message contains:
+
+- Requirement summary
+- Requirement details
+- Chat summary
+- Missing assumptions
+- Project metadata
+
+---
+
+## Step 6
+
+Project Manager Agent receives the request.
+
+The PM Agent:
+
+- Creates an execution plan.
+- Creates agent tasks.
+- Delegates work.
+
+Example:
+
+Requirement Analysis
+
+↓
+
+Business Analyst
+
+Architecture Design
+
+↓
+
+Technical Agent
+
+Cost Estimation
+
+↓
+
+Cost Agent
+
+Timeline
+
+↓
+
+Timeline Agent
+
+Risk Analysis
+
+↓
+
+Risk Agent
+
+---
+
+## Step 7
+
+Each specialist agent independently reasons using Llama.
+
+Every agent:
+
+- Reads assigned task.
+- Retrieves project memory.
+- Generates analysis.
+- Stores results.
+- Returns response.
+
+Agents never communicate directly with the client.
+
+---
+
+## Step 8
+
+Project Manager collects all responses.
+
+PM evaluates:
+
+- Missing information
+- Contradictions
+- Risks
+- Suggestions
+
+If clarification is required:
+
+PM sends a clarification request.
+
+---
+
+## Step 9
+
+Clarification Flow
+
+```
+
+PM Agent
+
+↓
+
+Gateway
+
+↓
+
+Client Agent
+
+↓
+
+Can Client Agent Answer?
+
+↓
+
+YES → Reply immediately
+
+↓
+
+NO
+
+↓
+
+Ask Client
+
+↓
+
+Client replies
+
+↓
+
+Client Agent updates memory
+
+↓
+
+Gateway
+
+↓
+
+PM Agent
+
+```
+
+This clarification loop continues until all required information has been collected.
+
+---
+
+## Step 10
+
+Project Manager generates a consolidated requirement summary.
+
+The summary includes:
+
+- Project overview
+- Functional requirements
+- Technical recommendations
+- Estimated cost
+- Timeline
+- Risks
+- Assumptions
+
+The PM manually reviews the summary.
+
+Once approved:
+
+Summary is sent back.
+
+---
+
+## Step 11
+
+Client Agent receives the summary.
+
+The Client Agent presents it inside the client chat.
+
+Example:
+
+"I've received the finalized requirement summary from our project team.
+
+Please review it carefully.
+
+If everything looks correct, you can approve it.
+
+Otherwise, let me know what you'd like to modify."
+
+---
+
+## Step 12
+
+Client reviews.
+
+If changes are requested:
+
+Repeat clarification workflow.
+
+If approved:
+
+Project status becomes:
+
+APPROVED
+
+---
+
+## Step 13
+
+Proposal Generation
+
+Project Manager generates:
+
+- Scope
+- Deliverables
+- Timeline
+- Cost
+- Technology Stack
+- Assumptions
+- Risks
+
+Proposal is stored.
+
+Proposal becomes available for download.
+
+---
+
+# 7. Technology Stack
+
+## Frontend
+
+- React
+- TypeScript
+- Tailwind CSS
+
+---
+
+## Backend
+
+- FastAPI
+- Python
+
+---
+
+## Database
+
+Primary Database
+
+- PostgreSQL
+
+Semantic Memory
+
+- pgvector
+
+---
+
+## AI Model
+
+- Llama
+
+Used for:
+
+- Requirement analysis
+- Planning
+- Reasoning
+- Summarization
+- Clarification
+- Proposal generation
+
+---
+
+## Communication
+
+- REST APIs
+- JSON Messages
+
+---
+
+## Authentication
+
+- JWT Authentication
+
+---
+
+# 8. Development Principles
+
+This project is intentionally designed as a lightweight PoC.
+
+Guidelines:
+
+- Keep the architecture simple.
+- Use PostgreSQL for all transactional data.
+- Use pgvector only for semantic retrieval.
+- Use Llama for reasoning.
+- Avoid enterprise-level complexity.
+- Prefer readability over optimization.
+- Build for demonstration rather than production.
+
+---
+
+# 9. Success Criteria
+
+The PoC is considered successful when:
+
+## Chatbot Experience
+
+- Client communicates naturally with Client Agent.
+- Client Agent communicates autonomously with Company Network.
+- Client receives clarification questions conversationally.
+
+---
+
+## Agent Collaboration
+
+- PM delegates work.
+- Specialist agents analyze independently.
+- PM consolidates results.
+- Agents use Llama reasoning.
+
+---
+
+## A2A Communication
+
+- Client Network and Company Network remain independent.
+- Communication occurs only through the Gateway.
+- Messages are routed successfully.
 
 ---
 
 ## Proposal Generation
 
-The final output should contain:
-
-- Requirement summary
-- Proposed solution
-- Architecture
-- Technology stack
-- Cost
-- Timeline
-- Risks
-- Assumptions
-
+- Requirements are validated.
+- Missing information is collected.
+- Summary is approved.
+- Proposal is generated.
 
 ---
 
-# 6. Autonomous Agent Definition
+# 10. Next Document
 
-An autonomous agent in this PoC consists of:
+The next document describes the complete system architecture including:
 
-
-Agent
-
-|
-
-Goal
-
-|
-
-Memory
-
-|
-
-Planning
-
-|
-
-Reasoning
-
-|
-
-Tools
-
-|
-
-Communication
-
-Each agent independently decides:
-
-- What needs to be done
-- Which tools to use
-- Which agent to contact
-- What response should be generated
-
-
----
-
-# 7. Organizations
-
-## Client Organization
-
-Responsible for:
-
-- Creating project requests
-- Providing requirements
-- Answering clarification questions
-- Reviewing proposals
-
-
-Contains:
-
-- Client Portal
-- Client Backend
-- Client Database
-- Client Agent
-
-
----
-
-## Software Company Organization
-
-Responsible for:
-
-- Requirement analysis
-- Technical evaluation
-- Estimation
-- Proposal creation
-
-
-Contains:
-
-- Manager Portal
-- Company Backend
-- Company Database
-- Project Manager Agent
-- Specialist Agents
-
-
----
-
-# 8. Key Differentiator
-
-This PoC is not a traditional project management application.
-
-The primary focus is:
-
-
-Autonomous AI Agents
-
-    +
-
-Cross Organization Communication
-
-    +
-
-A2A Protocol
-
-    +
-
-LLM Based Reasoning
-
-
-The project demonstrates how independent AI agents can collaborate securely without sharing internal systems.
-
----
-
-# 9. Expected Demo Scenario
-
-Example:
-
-1. Client creates a project request:
-
-
-Build an online healthcare platform.
-
-
-2. Client Agent analyzes the request.
-
-3. Client Agent sends request through A2A Gateway.
-
-4. Project Manager Agent receives the request.
-
-5. PM Agent creates an execution plan.
-
-6. PM Agent communicates with:
-
-
-Business Analyst Agent
-Technical Agent
-Cost Agent
-Timeline Agent
-Risk Agent
-
-
-7. Agents analyze the requirement.
-
-8. PM Agent combines results.
-
-9. Proposal is generated.
-
-10. Client reviews the proposal.
-
----
-
-# 10. PoC Success Criteria
-
-The PoC is successful when it demonstrates:
-
-- Two isolated organizational networks
-- Secure A2A communication
-- Autonomous agent collaboration
-- LLM-powered reasoning
-- Agent planning
-- Agent memory
-- Agent tool usage
-- Requirement analysis
-- Proposal generation
-
----
-
-# 11. Out of Scope
-
-The following are not part of this PoC:
-
-- Enterprise deployment
-- Kubernetes infrastructure
-- Multi-region architecture
-- Advanced IAM systems
-- Complex RAG pipelines
-- Large-scale monitoring
-- Production scalability
-
-These may be considered future enhancements.
-
----
-
-# 12. Technology Direction
-
-The implementation will use:
-
-- LLM-powered agents
+- Client Network
+- Company Network
 - A2A Gateway
-- Backend APIs
-- Simple persistent storage
-- Web-based interfaces
-
-The architecture should remain flexible so different LLM providers can be integrated later.
-
----
-
-# Conclusion
-
-This PoC demonstrates a future where organizations can collaborate through autonomous AI agents.
-
-The Client Agent communicates with the Software Company's Project Manager Agent through a secure A2A Gateway. The Project Manager Agent coordinates specialized AI agents to analyze requirements, design solutions, estimate effort, evaluate risks, and generate complete software project proposals.
-
-The goal is to prove that autonomous agents can securely collaborate across organizational boundaries while maintaining independent ownership of their systems and data.
+- PostgreSQL
+- pgvector
+- Llama Integration
+- Component interactions
+- Deployment architecture
+- Data flow
