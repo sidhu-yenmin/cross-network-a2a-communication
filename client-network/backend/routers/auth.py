@@ -21,6 +21,7 @@ def signup(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         full_name=user.full_name,
         company_name=user.company_name,
         email=user.email,
+        mobile_number=user.mobile_number,
         hashed_password=hashed_password
     )
     db.add(new_user)

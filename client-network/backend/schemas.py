@@ -6,6 +6,7 @@ class UserCreate(BaseModel):
     company_name: str
     email: EmailStr
     password: str
+    mobile_number: str
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -16,6 +17,7 @@ class UserResponse(BaseModel):
     full_name: str
     company_name: str
     email: EmailStr
+    mobile_number: str
 
     class Config:
         from_attributes = True

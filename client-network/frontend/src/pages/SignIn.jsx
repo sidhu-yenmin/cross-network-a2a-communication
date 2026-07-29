@@ -34,7 +34,7 @@ export default function SignIn() {
       }
 
       login(data.access_token);
-      navigate('/dashboard');
+      navigate('/projects');
     } catch (err) {
       setError(err.message);
     } finally {

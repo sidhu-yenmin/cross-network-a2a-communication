@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Incoming Requests', href: '/incoming-requests', icon: Inbox },
+  { name: 'Project Requests', href: '/incoming-requests', icon: Inbox },
   { name: 'Requirement Analysis', href: '/requirement-analysis', icon: FileSearch },
   { name: 'AI Analysis Console', href: '/ai-analysis', icon: BrainCircuit },
   { name: 'Proposal Approval', href: '/proposal-approval', icon: CheckSquare },

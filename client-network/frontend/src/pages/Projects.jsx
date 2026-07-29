@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { Briefcase, Clock, CheckCircle, Plus, X } from 'lucide-react';
 
 export default function Projects() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({ 
@@ -123,10 +125,37 @@ export default function Projects() {
 
       await fetchProjects();
       setIsModalOpen(false);
-      setNewProject({ 
-        id: null, name: '', description: '', target_platforms: '', target_audience: '',
-        expected_timeline: '', budget_range: '', key_features: '', existing_systems: ''
-      });
+      
+      if (!isEdit) {
+        // Construct auto message
+        let userName = 'there';
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.sub) userName = payload.sub.split('@')[0];
+        } catch (e) {}
+
+        const autoMsg = {
+          id: Date.now().toString(),
+          sender: 'agent',
+          text: `Hi ${userName}, I have received your project requirements for '${newProject.name}'. Shall I proceed and share this with the Manager Agent?`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        const existingMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
+        localStorage.setItem('chat_messages', JSON.stringify([...existingMessages, autoMsg]));
+        
+        // Reset and navigate
+        setNewProject({ 
+          id: null, name: '', description: '', target_platforms: '', target_audience: '',
+          expected_timeline: '', budget_range: '', key_features: '', existing_systems: ''
+        });
+        navigate('/messages');
+      } else {
+        setNewProject({ 
+          id: null, name: '', description: '', target_platforms: '', target_audience: '',
+          expected_timeline: '', budget_range: '', key_features: '', existing_systems: ''
+        });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -202,6 +231,12 @@ export default function Projects() {
                         style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', textDecoration: 'underline' }}
                       >
                         Edit
+                      </button>
+                      <button 
+                        onClick={() => navigate('/messages')}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        History
                       </button>
                     </td>
                   </tr>

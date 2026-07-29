@@ -97,9 +97,7 @@ class AgentOrchestrator:
         }
         
         # 3. Save the proposal and update status
-        # Note: In a complete implementation, this would be saved to a specific `Proposals` table.
-        # For this PoC workflow, we'll store it in a generic text column or just change the status.
-        # Since we don't have a proposal column yet, let's just update the status.
+        project.proposal_data = final_proposal
         project.agent_status = "PROPOSAL_GENERATED"
         self.db.commit()
         

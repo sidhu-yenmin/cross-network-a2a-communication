@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -13,6 +13,14 @@ SQLALCHEMY_DATABASE_URL = os.environ.get(
 )
  
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
+try:
+    with engine.connect() as con:
+        con.execute(text("ALTER TABLE users ADD COLUMN mobile_number VARCHAR;"))
+        con.commit()
+except Exception as e:
+    pass # Ignore if column already exists
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
  
 Base = declarative_base()

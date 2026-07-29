@@ -6,8 +6,10 @@ import {
   CheckCircle2, 
   ArrowRight 
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   return (
     <div className="dashboard-view">
       <div className="dashboard-header">
@@ -16,19 +18,31 @@ export default function Dashboard() {
       </div>
 
       <div className="dashboard-grid">
-        <div className="dashboard-card glass-panel stat-card">
+        <div 
+          className="dashboard-card glass-panel stat-card"
+          onClick={() => navigate('/incoming-requests')}
+          style={{ cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+          onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+        >
           <div className="stat-icon-wrapper blue">
             <Inbox size={24} />
           </div>
           <div className="stat-content">
-            <h3>Incoming Requests</h3>
+            <h3>Project Requests</h3>
             <p className="stat-value">3</p>
             <span className="stat-label">Awaiting Assignment</span>
           </div>
           <ArrowRight className="stat-action" size={20} />
         </div>
         
-        <div className="dashboard-card glass-panel stat-card">
+        <div 
+          className="dashboard-card glass-panel stat-card"
+          onClick={() => navigate('/incoming-requests', { state: { defaultTab: 'Analyse' } })}
+          style={{ cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+          onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+        >
           <div className="stat-icon-wrapper purple">
             <Activity size={24} />
           </div>
@@ -40,7 +54,13 @@ export default function Dashboard() {
           <ArrowRight className="stat-action" size={20} />
         </div>
 
-        <div className="dashboard-card glass-panel stat-card">
+        <div 
+          className="dashboard-card glass-panel stat-card"
+          onClick={() => navigate('/incoming-requests', { state: { defaultTab: 'Pending' } })}
+          style={{ cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+          onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+        >
           <div className="stat-icon-wrapper orange">
             <Clock size={24} />
           </div>
@@ -52,7 +72,13 @@ export default function Dashboard() {
           <ArrowRight className="stat-action" size={20} />
         </div>
 
-        <div className="dashboard-card glass-panel stat-card">
+        <div 
+          className="dashboard-card glass-panel stat-card"
+          onClick={() => navigate('/incoming-requests', { state: { defaultTab: 'Approved' } })}
+          style={{ cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+          onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+        >
           <div className="stat-icon-wrapper green">
             <CheckCircle2 size={24} />
           </div>
