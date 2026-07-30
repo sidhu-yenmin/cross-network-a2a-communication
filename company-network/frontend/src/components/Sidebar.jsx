@@ -8,7 +8,8 @@ import {
   History, 
   LogOut,
   Shield,
-  FileSearch
+  FileSearch,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'AI Analysis Console', href: '/ai-analysis', icon: BrainCircuit },
   { name: 'Proposal Approval', href: '/proposal-approval', icon: CheckSquare },
   { name: 'Proposal History', href: '/proposal-history', icon: History },
+  { name: 'Chat', href: '/messages', icon: MessageSquare },
 ];
 
 export default function Sidebar() {

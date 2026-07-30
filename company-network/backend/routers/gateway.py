@@ -9,6 +9,7 @@ router = APIRouter(prefix="/api/gateway", tags=["gateway"])
 @router.post("/receive-request", response_model=schemas.IncomingProjectResponse)
 def receive_client_request(
     project_payload: schemas.IncomingProjectCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db)
 ):
     # Log the incoming request (simulating network entry point)
@@ -38,8 +39,9 @@ def receive_client_request(
     
     print(f"[*] Stored new incoming project {new_incoming.id}. Ready for PM Agent Analysis.")
     
+    # Trigger the PM Agent orchestration automatically upon receiving the approved requirements
+    background_tasks.add_task(run_orchestrator, new_incoming.id)
     
-    # In a full implementation, this is where we trigger the Project Manager Agent
     return new_incoming
 
 @router.get("/incoming-requests", response_model=List[schemas.IncomingProjectResponse])

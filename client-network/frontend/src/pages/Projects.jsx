@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { Briefcase, Clock, CheckCircle, Plus, X } from 'lucide-react';
 
 export default function Projects() {
   const { token } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [projects, setProjects] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({ 
@@ -32,6 +33,17 @@ export default function Projects() {
     }
     fetchProjects();
   }, [token]);
+
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      handleOpenCreateModal();
+      // Remove 'new=true' from URL without refreshing so modal stays open but refresh doesn't trigger it again
+      setSearchParams(params => {
+        params.delete('new');
+        return params;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const fetchProjects = async () => {
     try {
@@ -125,6 +137,7 @@ export default function Projects() {
         throw new Error(isEdit ? 'Failed to update project' : 'Failed to create project');
       }
 
+      const savedProject = await response.json();
       await fetchProjects();
       setIsModalOpen(false);
       
@@ -138,6 +151,7 @@ export default function Projects() {
 
         const autoMsg = {
           id: Date.now().toString(),
+          projectId: savedProject.id,
           sender: 'agent',
           text: `Hi ${userName}, I have received your project requirements for '${newProject.name}'. Shall I proceed and share this with the Manager Agent?`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -151,7 +165,7 @@ export default function Projects() {
           id: null, name: '', description: '', target_platforms: '', target_audience: '',
           expected_timeline: '', budget_range: '', key_features: '', existing_systems: ''
         });
-        navigate('/messages');
+        navigate(`/messages?projectId=${savedProject.id}`);
       } else {
         setNewProject({ 
           id: null, name: '', description: '', target_platforms: '', target_audience: '',
@@ -235,7 +249,7 @@ export default function Projects() {
                         Edit
                       </button>
                       <button 
-                        onClick={() => navigate('/messages')}
+                        onClick={() => navigate(`/messages?projectId=${project.id}`)}
                         style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', textDecoration: 'underline' }}
                       >
                         History
