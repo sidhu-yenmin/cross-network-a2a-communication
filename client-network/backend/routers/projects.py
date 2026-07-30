@@ -52,9 +52,6 @@ def create_project(
     db.commit()
     db.refresh(new_project)
     
-    # Trigger autonomous A2A transmission in the background
-    background_tasks.add_task(transmit_to_company_network, new_project)
-    
     return new_project
 
 @router.get("/", response_model=List[schemas.ProjectResponse])
@@ -88,7 +85,22 @@ def update_project(
     
     updated_project = project_query.first()
     
-    # Transmit updated project to Company Network
-    background_tasks.add_task(transmit_to_company_network, updated_project)
-    
     return updated_project
+
+@router.post("/{project_id}/transmit")
+def transmit_project(
+    project_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(dependencies.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.Project).filter(
+        models.Project.id == project_id, 
+        models.Project.user_id == current_user.id
+    ).first()
+    
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        
+    background_tasks.add_task(transmit_to_company_network, project)
+    return {"message": "Project transmission to Company Network initiated."}

@@ -10,6 +10,7 @@ import RequirementAnalysis from './pages/RequirementAnalysis';
 import AIAnalysisConsole from './pages/AIAnalysisConsole';
 import ProposalApproval from './pages/ProposalApproval';
 import ProposalHistory from './pages/ProposalHistory';
+import Messages from './pages/Messages';
 import Layout from './components/Layout';
 import './App.css';
 import './index.css';
@@ -47,6 +48,7 @@ function App() {
             <Route path="/ai-analysis" element={<AIAnalysisConsole />} />
             <Route path="/proposal-approval" element={<ProposalApproval />} />
             <Route path="/proposal-history" element={<ProposalHistory />} />
+            <Route path="/messages" element={<Messages />} />
           </Route>
         </Routes>
       </Router>

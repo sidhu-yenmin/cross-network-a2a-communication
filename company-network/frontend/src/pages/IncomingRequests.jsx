@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { User, Calendar, Briefcase, ChevronRight, Play, Search } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function IncomingRequests() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,6 +60,33 @@ export default function IncomingRequests() {
       alert(`Error assigning AI: ${err.message}`);
     }
   };
+
+  const handleOpenChat = (request) => {
+    const existingMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
+    const hasMessagesForProject = existingMessages.some(msg => msg.projectId === request.client_project_id);
+    
+    if (!hasMessagesForProject) {
+      const welcomeMsg = {
+        id: Date.now().toString(),
+        projectId: request.client_project_id,
+        sender: 'user', // Client
+        text: `Hello! I have just shared the requirements for project '${request.name}' with you. Looking forward to the proposal!`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      const agentReply = {
+        id: (Date.now() + 1).toString(),
+        projectId: request.client_project_id,
+        sender: 'agent', // Company
+        text: `Project received from Client. The PM Agent has started orchestrating the requirement analysis for '${request.name}'.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      localStorage.setItem('chat_messages', JSON.stringify([...existingMessages, welcomeMsg, agentReply]));
+    }
+    
+    navigate(`/messages?projectId=${request.client_project_id}`);
+  };
+
   const filteredRequests = requests.filter(request => {
     const matchesSearch = request.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           request.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,6 +163,13 @@ export default function IncomingRequests() {
               <div className="request-card-footer">
                 <button className="btn-outline" onClick={() => setSelectedRequest(request)}>
                   Review Details <ChevronRight size={16} />
+                </button>
+                <button 
+                  className="btn-outline" 
+                  onClick={() => handleOpenChat(request)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  Chat
                 </button>
                 <button 
                   className="btn-primary" 
@@ -258,6 +293,13 @@ export default function IncomingRequests() {
             )}
             
             <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <button 
+                className="btn-outline" 
+                onClick={() => handleOpenChat(selectedRequest)}
+                style={{ marginRight: 'auto' }}
+              >
+                Open Chat
+              </button>
               <button 
                 className="btn-primary"
                 onClick={() => handleAssignToAI(selectedRequest.id)}
