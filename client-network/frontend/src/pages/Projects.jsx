@@ -26,9 +26,11 @@ export default function Projects() {
   const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
-    if (token) {
-      fetchProjects();
+    if (!token) {
+      navigate('/');
+      return;
     }
+    fetchProjects();
   }, [token]);
 
   const fetchProjects = async () => {
@@ -163,7 +165,7 @@ export default function Projects() {
     }
   };
 
-  if (!token) return null;
+  if (!token) return null; // will redirect via useEffect
 
   const getStatusIcon = (status) => {
     switch (status) {

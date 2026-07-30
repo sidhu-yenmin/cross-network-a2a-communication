@@ -34,17 +34,17 @@ export default function SignUp() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle pydantic validation errors (array of errors)
+        if (Array.isArray(data.detail)) {
+          throw new Error(data.detail[0].msg || 'Validation failed');
+        }
         throw new Error(data.detail || 'Failed to sign up');
       }
 
       // Auto login or redirect to sign in. Redirecting to sign in is simpler.
       navigate('/?registered=true');
     } catch (err) {
-      if (Array.isArray(err.detail)) {
-         setError(err.detail[0].msg);
-      } else {
-         setError(err.message);
-      }
+      setError(err.message);
     } finally {
       setLoading(false);
     }

@@ -1,10 +1,16 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, MessageSquare, Briefcase, Settings, LogOut, Hexagon } from 'lucide-react';
 
 export default function Sidebar() {
   const { logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   const navItems = [
     { path: '/projects', label: 'Projects', icon: Briefcase },
@@ -32,7 +38,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <button onClick={logout} className="nav-item logout">
+      <button onClick={handleLogout} className="nav-item logout">
         <LogOut size={20} />
         <span>Logout</span>
       </button>

@@ -13,9 +13,13 @@ export default function Messages() {
 
   useEffect(() => {
     // Load messages from localStorage on mount
+    if (!token) {
+      navigate('/');
+      return;
+    }
     const savedMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
     setMessages(savedMessages);
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     // Scroll to bottom whenever messages change
