@@ -1,10 +1,21 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import { User, Mail, Building, Bell, Shield, Save } from 'lucide-react';
 
 export default function Settings() {
   const { token } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!token) {
+      navigate('/');
+    }
+  }, [token, navigate]);
+
   if (!token) return null;
+
 
   return (
     <div className="dashboard-layout">
