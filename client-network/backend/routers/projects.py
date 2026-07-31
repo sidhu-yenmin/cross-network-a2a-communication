@@ -104,3 +104,96 @@ def transmit_project(
         
     background_tasks.add_task(transmit_to_company_network, project)
     return {"message": "Project transmission to Company Network initiated."}
+
+from typing import Optional
+
+@router.post("/chat")
+def chat_with_agent(
+    chat_request: schemas.ChatRequest,
+    project_id: Optional[int] = None,
+    current_user: models.User = Depends(dependencies.get_current_user),
+    db: Session = Depends(database.get_db),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    project = None
+    if project_id:
+        project = db.query(models.Project).filter(
+            models.Project.id == project_id, 
+            models.Project.user_id == current_user.id
+        ).first()
+        if not project:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        
+    from agents.core.llm_provider import LLMClient
+    try:
+        llm_client = LLMClient()
+        history_dicts = [{"sender": h.sender, "text": h.text} for h in chat_request.history]
+        
+        system_prompt = (
+            "You are a Client Representative Agent. "
+            "Your goal is to interactively chat with the client and gather requirements for their software project. "
+            "Be concise, polite, and ask one clear question at a time to uncover missing details like budget, timeline, target audience, and key features. "
+            "Set is_complete to true ONLY when you have gathered all necessary information. "
+            "If the user wants to start a general chat, interact normally but keep gathering information."
+        )
+        
+        # Get structured response from LLM
+        response = llm_client.generate_chat_response(
+            message=chat_request.message,
+            history=history_dicts,
+            system_prompt=system_prompt
+        )
+        
+        reply_text = response.reply
+        new_project_id = None
+        
+        # If the LLM has decided requirements are complete
+        if response.is_complete:
+            if project:
+                # Update existing project
+                project.name = response.project_name or project.name
+                project.description = response.description or project.description
+                project.target_platforms = response.target_platforms or project.target_platforms
+                project.target_audience = response.target_audience or project.target_audience
+                project.expected_timeline = response.expected_timeline or project.expected_timeline
+                project.budget_range = response.budget_range or project.budget_range
+                project.key_features = response.key_features or project.key_features
+                project.existing_systems = response.existing_systems or project.existing_systems
+                project.status = "SUBMITTED"
+                db.commit()
+                db.refresh(project)
+                print(f"[*] Updated existing project {project.id} with extracted requirements.")
+            else:
+                # Create a new project
+                project = models.Project(
+                    name=response.project_name or "New Project Request",
+                    description=response.description or "Generated from chat",
+                    target_platforms=response.target_platforms or "Not specified",
+                    target_audience=response.target_audience or "Not specified",
+                    expected_timeline=response.expected_timeline or "Not specified",
+                    budget_range=response.budget_range or "Not specified",
+                    key_features=response.key_features or "Not specified",
+                    existing_systems=response.existing_systems or "Not specified",
+                    status="SUBMITTED",
+                    user_id=current_user.id
+                )
+                db.add(project)
+                db.commit()
+                db.refresh(project)
+                new_project_id = project.id
+                print(f"[*] Created new project {project.id} from chat.")
+
+            # Append transmission notice to reply
+            reply_text += "\n\n(I have collected enough information and am transmitting your project to the Company Network now!)"
+            
+            # Trigger A2A background transmission
+            background_tasks.add_task(transmit_to_company_network, project)
+            
+        return {
+            "reply": reply_text,
+            "is_complete": response.is_complete,
+            "project_id": project.id if project else None
+        }
+    except Exception as e:
+        print(f"Error in chat endpoint: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -12,6 +12,7 @@ export default function Messages() {
   const projectId = projectIdStr ? parseInt(projectIdStr, 10) : null;
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -46,30 +47,59 @@ export default function Messages() {
     localStorage.setItem('chat_messages', JSON.stringify(updatedMessages));
     setInputValue('');
     
-    // Auto-reply for demo purposes (optional)
-    if (newMsg.text.toLowerCase().includes('yes') || newMsg.text.toLowerCase().includes('proceed')) {
-      // Trigger A2A transmission
-      if (projectId && token) {
-        fetch(`http://localhost:8001/api/projects/${projectId}/transmit`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }).catch(err => console.error("Failed to transmit project:", err));
-      }
+    // Call backend API for real interactive LLM chat
+    if (token) {
+      // Get the history just for this project (or null if direct chat)
+      const history = messages
+        .filter(m => m.projectId === projectId)
+        .map(m => ({ sender: m.sender, text: m.text }));
 
-      setTimeout(() => {
+      const queryParam = projectId ? `?project_id=${projectId}` : '';
+      
+      setIsTyping(true);
+      fetch(`http://localhost:8001/api/projects/chat${queryParam}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: newMsg.text,
+          history: history
+        })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("API response was not ok");
+        return res.json();
+      })
+      .then(data => {
+        // If a new project was created by the agent, update the URL
+        if (data.project_id && data.project_id !== projectId) {
+          navigate(`/messages?projectId=${data.project_id}`, { replace: true });
+          // Update the messages that had null projectId to the new one
+          setMessages(prev => {
+            const updated = prev.map(m => m.projectId === null ? { ...m, projectId: data.project_id } : m);
+            localStorage.setItem('chat_messages', JSON.stringify(updated));
+            return updated;
+          });
+        }
+
         const replyMsg = {
-          id: Date.now().toString(),
-          projectId: projectId,
+          id: Date.now().toString() + "-agent",
+          projectId: data.project_id || projectId,
           sender: 'agent',
-          text: 'Great! I have shared your requirements with the Manager Agent. They will review it and coordinate with the rest of the team. You will be notified once a formal proposal is ready.',
+          text: data.reply,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
-        const newUpdated = [...updatedMessages, replyMsg];
-        setMessages(newUpdated);
-        localStorage.setItem('chat_messages', JSON.stringify(newUpdated));
-      }, 1500);
+        setMessages(prev => {
+          const newUpdated = [...prev, replyMsg];
+          localStorage.setItem('chat_messages', JSON.stringify(newUpdated));
+          return newUpdated;
+        });
+
+      })
+      .catch(err => console.error("Failed to get chat response:", err))
+      .finally(() => setIsTyping(false));
     }
   };
 
@@ -77,7 +107,7 @@ export default function Messages() {
 
   const displayedMessages = projectId 
     ? messages.filter(msg => msg.projectId === projectId)
-    : [];
+    : messages.filter(msg => msg.projectId === null);
 
   return (
     <div className="dashboard-layout">
@@ -136,13 +166,9 @@ export default function Messages() {
           {/* Chat History Area */}
           <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             
-            {!projectId ? (
+            {displayedMessages.length === 0 ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                <p>Please select a project from the Projects tab to view its chat history.</p>
-              </div>
-            ) : displayedMessages.length === 0 ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                <p>No messages yet for this project. Send a message to start a conversation.</p>
+                <p>{!projectId ? "Welcome! You can start a new project by chatting below, or select an existing project." : "No messages yet for this project. Send a message to start a conversation."}</p>
               </div>
             ) : (
               displayedMessages.map(msg => (
@@ -198,6 +224,34 @@ export default function Messages() {
                 </button>
               </div>
             )}
+            {/* Typing Indicator */}
+            {isTyping && (
+              <div style={{ display: 'flex', gap: '1rem', flexDirection: 'row' }}>
+                <div style={{ 
+                  width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+                  background: 'rgba(99, 102, 241, 0.1)', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  color: 'var(--primary-accent)' 
+                }}>
+                  <Bot size={20} />
+                </div>
+                <div style={{ 
+                  background: 'var(--input-bg)', 
+                  border: '1px solid var(--input-border)', 
+                  padding: '1rem', 
+                  borderRadius: '0 12px 12px 12px', 
+                  maxWidth: '80%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}>
+                  <div style={{width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both'}}></div>
+                  <div style={{width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both', animationDelay: '0.2s'}}></div>
+                  <div style={{width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both', animationDelay: '0.4s'}}></div>
+                </div>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
 
@@ -207,13 +261,12 @@ export default function Messages() {
               <input 
                 type="text" 
                 className="form-input" 
-                placeholder={projectId ? "Type your message..." : "Select a project first..."}
+                placeholder="Type your message to the agent..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 style={{ flex: 1, paddingLeft: '1rem' }} 
-                disabled={!projectId}
               />
-              <button type="submit" className="btn-primary" style={{ width: 'auto', padding: '0.75rem 1.25rem' }} disabled={!projectId || !inputValue.trim()}>
+              <button type="submit" className="btn-primary" style={{ width: 'auto', padding: '0.75rem 1.25rem' }} disabled={!inputValue.trim()}>
                 <Send size={18} />
               </button>
             </div>

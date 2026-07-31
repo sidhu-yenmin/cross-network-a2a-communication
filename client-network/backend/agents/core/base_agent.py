@@ -49,6 +49,14 @@ class BaseAgent:
         # Planning Engine state
         self.plan = []
         
+        # LLM Provider
+        try:
+            from .llm_provider import LLMClient
+            self.llm_client = LLMClient()
+        except Exception as e:
+            print(f"Warning: Could not initialize LLMClient for {self.agent_id}: {e}")
+            self.llm_client = None
+        
     def add_to_memory(self, memory_type: str, key: str, value: Any):
         """Add context to the agent's memory."""
         if memory_type == "working_memory":
@@ -74,9 +82,27 @@ class BaseAgent:
     def reason(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Reasoning Engine: Evaluates information and decides actions.
-        In a real implementation, this uses the LLM to decide the next action.
+        Uses the LLM to understand requirements and extract entities.
         """
-        # Placeholder for PoC reasoning logic
+        if self.llm_client:
+            try:
+                analysis = self.llm_client.analyze_client_form(
+                    form_data=context, 
+                    system_prompt=self.system_prompt
+                )
+                return {
+                    "decision": "Analyzed form and generated response",
+                    "reason": analysis.understanding_summary,
+                    "extracted_entities": analysis.extracted_entities,
+                    "missing_fields": analysis.missing_fields,
+                    "greeting": analysis.greeting,
+                    "conversation_starter": analysis.conversation_starter,
+                    "confidence": 0.95
+                }
+            except Exception as e:
+                print(f"[{self.agent_id}] LLM Reasoning failed: {e}")
+
+        # Fallback reasoning logic
         return {
             "decision": "Proceed with plan",
             "reason": "Default reasoning step",
