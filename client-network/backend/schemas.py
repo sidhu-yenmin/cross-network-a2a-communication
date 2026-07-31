@@ -59,3 +59,13 @@ class ProjectResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+from typing import List
+
+class ChatMessage(BaseModel):
+    sender: str
+    text: str
+
+class ChatRequest(BaseModel):
+    message: str
+    history: List[ChatMessage] = []
