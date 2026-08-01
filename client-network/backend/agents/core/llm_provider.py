@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from pydantic import BaseModel, Field
 
 class AgentChatResponse(BaseModel):
-    reply: str = Field(description="Your conversational reply to the client.")
+    reply: str = Field(description="Your conversational reply to the client. MUST decline to answer if the user asks about unrelated topics, and steer them back to project requirements.")
     is_complete: bool = Field(description="Set to true ONLY if you have gathered all necessary information (name, description, target platforms, target audience, expected timeline, budget range, key features, existing systems) and are ready to finalize.")
     project_name: str = Field(default="", description="The name of the project")
     description: str = Field(default="", description="Detailed requirements of the project")
