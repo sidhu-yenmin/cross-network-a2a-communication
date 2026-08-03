@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import { Send, User, Bot, Briefcase, Plus } from 'lucide-react';
 
 export default function Messages() {
-  const { token } = useAuth();
+  const { token, userId } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectIdStr = searchParams.get('projectId');
@@ -16,14 +16,16 @@ export default function Messages() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    // Load messages from localStorage on mount
+    // Load messages from localStorage on mount (scoped to the logged-in user)
     if (!token) {
       navigate('/');
       return;
     }
-    const savedMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
+    if (!userId) return; // wait until userId is decoded from token
+    const storageKey = `chat_messages_${userId}`;
+    const savedMessages = JSON.parse(localStorage.getItem(storageKey) || '[]');
     setMessages(savedMessages);
-  }, [token]);
+  }, [token, userId]);
 
   useEffect(() => {
     // Scroll to bottom whenever messages change
@@ -42,9 +44,10 @@ export default function Messages() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
+    const storageKey = `chat_messages_${userId}`;
     const updatedMessages = [...messages, newMsg];
     setMessages(updatedMessages);
-    localStorage.setItem('chat_messages', JSON.stringify(updatedMessages));
+    localStorage.setItem(storageKey, JSON.stringify(updatedMessages));
     setInputValue('');
     
     // Call backend API for real interactive LLM chat
@@ -79,7 +82,7 @@ export default function Messages() {
           // Update the messages that had null projectId to the new one
           setMessages(prev => {
             const updated = prev.map(m => m.projectId === null ? { ...m, projectId: data.project_id } : m);
-            localStorage.setItem('chat_messages', JSON.stringify(updated));
+            localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(updated));
             return updated;
           });
         }
@@ -93,7 +96,7 @@ export default function Messages() {
         };
         setMessages(prev => {
           const newUpdated = [...prev, replyMsg];
-          localStorage.setItem('chat_messages', JSON.stringify(newUpdated));
+          localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(newUpdated));
           return newUpdated;
         });
 

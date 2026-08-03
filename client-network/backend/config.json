@@ -1,8 +1,8 @@
 {
   "ollama_llama": {
     "provider_type": "ollama",
-    "model": "llama3.2:latest",
-    "base_url": "https://charred-afterlife-charcoal.ngrok-free.dev/",
+    "model": "llama3.1:8b",
+    "base_url": "https://28j0qmws-11434.inc1.devtunnels.ms/",
     "temperature": 0
   }
 }
