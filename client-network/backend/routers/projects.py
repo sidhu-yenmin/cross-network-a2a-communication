@@ -107,6 +107,32 @@ def transmit_project(
 
 from typing import Optional
 
+@router.get("/chat/history", response_model=List[schemas.ChatMessageResponse])
+def get_chat_history(
+    project_id: Optional[int] = None,
+    current_user: models.User = Depends(dependencies.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Retrieve all chat messages for the current user, optionally filtered by project."""
+    query = db.query(models.ChatMessageRecord).filter(
+        models.ChatMessageRecord.user_id == current_user.id
+    )
+    if project_id is not None:
+        query = query.filter(models.ChatMessageRecord.project_id == project_id)
+    else:
+        query = query.filter(models.ChatMessageRecord.project_id == None)
+    return query.order_by(models.ChatMessageRecord.timestamp.asc()).all()
+
+@router.get("/chat/history/all", response_model=List[schemas.ChatMessageResponse])
+def get_all_chat_history(
+    current_user: models.User = Depends(dependencies.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Retrieve ALL chat messages for the current user (across all projects)."""
+    return db.query(models.ChatMessageRecord).filter(
+        models.ChatMessageRecord.user_id == current_user.id
+    ).order_by(models.ChatMessageRecord.timestamp.asc()).all()
+
 @router.post("/chat")
 def chat_with_agent(
     chat_request: schemas.ChatRequest,
@@ -126,8 +152,23 @@ def chat_with_agent(
         
     from agents.core.llm_provider import LLMClient
     try:
+        # Save the user's message to the database
+        user_msg_record = models.ChatMessageRecord(
+            user_id=current_user.id,
+            project_id=project_id,
+            sender="user",
+            text=chat_request.message
+        )
+        db.add(user_msg_record)
+        db.commit()
+
         llm_client = LLMClient()
-        history_dicts = [{"sender": h.sender, "text": h.text} for h in chat_request.history]
+        # Build history from the database for this project/conversation
+        db_history = db.query(models.ChatMessageRecord).filter(
+            models.ChatMessageRecord.user_id == current_user.id,
+            models.ChatMessageRecord.project_id == project_id
+        ).order_by(models.ChatMessageRecord.timestamp.asc()).all()
+        history_dicts = [{"sender": m.sender, "text": m.text} for m in db_history]
         
         system_prompt = (
             "You are a strict Project Requirement Assistant. "
@@ -137,6 +178,7 @@ def chat_with_agent(
             "ABSOLUTE RULE: Under no circumstances should you answer questions, provide information, or chat about topics unrelated to gathering project requirements. "
             "If the user says anything unrelated (e.g., general knowledge, casual chat, math, code), reply exactly with: 'Please ask queries only related to our project requirement.'"
         )
+        
         
         # Get structured response from LLM
         response = llm_client.generate_chat_response(
@@ -190,10 +232,31 @@ def chat_with_agent(
             # Trigger A2A background transmission
             background_tasks.add_task(transmit_to_company_network, project)
             
+        final_project_id = project.id if project else project_id
+
+        # Save the agent's reply to the database
+        agent_msg_record = models.ChatMessageRecord(
+            user_id=current_user.id,
+            project_id=final_project_id,
+            sender="agent",
+            text=reply_text
+        )
+        db.add(agent_msg_record)
+
+        # If a new project was created, update the user's earlier messages
+        # that had project_id=None to point to the new project
+        if new_project_id:
+            db.query(models.ChatMessageRecord).filter(
+                models.ChatMessageRecord.user_id == current_user.id,
+                models.ChatMessageRecord.project_id == None
+            ).update({"project_id": new_project_id}, synchronize_session="fetch")
+
+        db.commit()
+
         return {
             "reply": reply_text,
             "is_complete": response.is_complete,
-            "project_id": project.id if project else None
+            "project_id": final_project_id
         }
     except Exception as e:
         print(f"Error in chat endpoint: {e}")

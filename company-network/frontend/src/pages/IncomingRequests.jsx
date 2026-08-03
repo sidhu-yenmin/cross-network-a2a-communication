@@ -66,22 +66,42 @@ export default function IncomingRequests() {
     const hasMessagesForProject = existingMessages.some(msg => msg.projectId === request.client_project_id);
     
     if (!hasMessagesForProject) {
-      const welcomeMsg = {
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Client Agent sends a structured summary of all collected requirements
+      const summaryLines = [
+        `📋 Project Requirements Summary`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `🔹 Project Name     : ${request.name || 'N/A'}`,
+        `🔹 Description      : ${request.description || 'N/A'}`,
+        `🔹 Target Platforms : ${request.target_platforms || 'N/A'}`,
+        `🔹 Target Audience  : ${request.target_audience || 'N/A'}`,
+        `🔹 Timeline         : ${request.expected_timeline || 'N/A'}`,
+        `🔹 Budget Range     : ${request.budget_range || 'N/A'}`,
+        `🔹 Key Features     : ${request.key_features || 'N/A'}`,
+        `🔹 Existing Systems : ${request.existing_systems || 'N/A'}`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `✅ All requirements have been collected and verified with the client. Please review and proceed with the proposal.`
+      ].join('\n');
+
+      const clientSummaryMsg = {
         id: Date.now().toString(),
         projectId: request.client_project_id,
-        sender: 'user', // Client
-        text: `Hello! I have just shared the requirements for project '${request.name}' with you. Looking forward to the proposal!`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        sender: 'user', // Client Agent
+        text: summaryLines,
+        timestamp: now
       };
-      const agentReply = {
+
+      // PM Agent acknowledges receipt
+      const pmAcknowledgeMsg = {
         id: (Date.now() + 1).toString(),
         projectId: request.client_project_id,
-        sender: 'agent', // Company
-        text: `Project received from Client. The PM Agent has started orchestrating the requirement analysis for '${request.name}'.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        sender: 'agent', // PM Agent
+        text: `✅ Requirements received for "${request.name}". I have reviewed all the collected details. The AI analysis pipeline has been triggered — our BA, Technical, Timeline, Cost, and Risk agents will now process this request and generate a full proposal shortly.`,
+        timestamp: now
       };
-      
-      localStorage.setItem('chat_messages', JSON.stringify([...existingMessages, welcomeMsg, agentReply]));
+
+      localStorage.setItem('chat_messages', JSON.stringify([...existingMessages, clientSummaryMsg, pmAcknowledgeMsg]));
     }
     
     navigate(`/messages?projectId=${request.client_project_id}`);

@@ -60,7 +60,7 @@ class ProjectResponse(BaseModel):
     class Config:
         from_attributes = True
 
-from typing import List
+from typing import List, Optional
 
 class ChatMessage(BaseModel):
     sender: str
@@ -69,3 +69,14 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: List[ChatMessage] = []
+
+class ChatMessageResponse(BaseModel):
+    id: int
+    user_id: int
+    project_id: Optional[int]
+    sender: str
+    text: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True

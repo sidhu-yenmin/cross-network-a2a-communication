@@ -11,7 +11,7 @@ app = FastAPI(title="Client Network Backend API")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5174"],  # React app port
+    allow_origins=["*"],  # In production, specify the exact origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

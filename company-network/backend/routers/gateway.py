@@ -80,3 +80,18 @@ def assign_ai_to_request(
     background_tasks.add_task(run_orchestrator, project_id)
     
     return {"message": "Agent orchestration started", "project_id": project_id}
+
+@router.get("/agent-messages/{client_project_id}", response_model=List[schemas.AgentChatMessageResponse])
+def get_agent_messages(
+    client_project_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Fetch all live agent delegation messages for a given client_project_id (for the chat UI)."""
+    messages = (
+        db.query(models.AgentChatMessage)
+        .filter(models.AgentChatMessage.client_project_id == client_project_id)
+        .order_by(models.AgentChatMessage.created_at.asc())
+        .all()
+    )
+    return messages

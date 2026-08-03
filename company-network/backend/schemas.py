@@ -49,3 +49,15 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+class AgentChatMessageResponse(BaseModel):
+    id: int
+    project_id: int
+    client_project_id: int
+    sender_agent: str
+    sender_type: str
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

@@ -16,15 +16,39 @@ export default function Messages() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    // Load messages from localStorage on mount (scoped to the logged-in user)
+    // Load messages from backend DB (source of truth), fall back to localStorage
     if (!token) {
       navigate('/');
       return;
     }
     if (!userId) return; // wait until userId is decoded from token
-    const storageKey = `chat_messages_${userId}`;
-    const savedMessages = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    setMessages(savedMessages);
+
+    const loadMessages = async () => {
+      try {
+        const res = await fetch(`http://localhost:8001/api/projects/chat/history/all`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to fetch chat history');
+        const data = await res.json();
+        // Transform DB records to match the frontend message shape
+        const dbMessages = data.map(m => ({
+          id: m.id.toString(),
+          projectId: m.project_id,
+          sender: m.sender,
+          text: m.text,
+          timestamp: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }));
+        setMessages(dbMessages);
+        // Update localStorage cache
+        localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(dbMessages));
+      } catch (err) {
+        console.warn('Could not load chat history from server, using localStorage fallback:', err);
+        const storageKey = `chat_messages_${userId}`;
+        const savedMessages = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        setMessages(savedMessages);
+      }
+    };
+    loadMessages();
   }, [token, userId]);
 
   useEffect(() => {
