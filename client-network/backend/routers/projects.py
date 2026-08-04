@@ -174,7 +174,9 @@ def chat_with_agent(
             "You are a strict Project Requirement Assistant. "
             "Your ONLY goal is to interactively chat with the client and gather software project requirements. "
             "Be concise, polite, and ask one clear question at a time to uncover missing details like budget, timeline, target audience, and key features. "
-            "Set is_complete to true ONLY when you have gathered all necessary information. "
+            "Once you have gathered ALL necessary details (project name, description, target platforms, target audience, expected timeline, budget range, key features, and existing systems), "
+            "mark the conversation as complete internally. Your reply should be a natural confirmation like 'Thank you! I have all the details I need. Your project requirements are being submitted for review.' "
+            "IMPORTANT: NEVER include internal field names, JSON keys, or technical instructions (like 'is_complete', 'set to true', etc.) in your reply to the client. Your reply must always be natural, human-readable text. "
             "ABSOLUTE RULE: Under no circumstances should you answer questions, provide information, or chat about topics unrelated to gathering project requirements. "
             "If the user says anything unrelated (e.g., general knowledge, casual chat, math, code), reply exactly with: 'Please ask queries only related to our project requirement.'"
         )
@@ -227,7 +229,7 @@ def chat_with_agent(
                 print(f"[*] Created new project {project.id} from chat.")
 
             # Append transmission notice to reply
-            reply_text += "\n\n(I have collected enough information and am transmitting your project to the Company Network now!)"
+            reply_text += "\n\n✅ All project requirements have been gathered successfully. Your project is now being securely transmitted to our Company Network for review and proposal generation. You will be notified once the analysis is complete."
             
             # Trigger A2A background transmission
             background_tasks.add_task(transmit_to_company_network, project)

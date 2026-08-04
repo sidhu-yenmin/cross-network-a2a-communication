@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Calendar, Briefcase, ChevronRight, Play, Search } from 'lucide-react';
+import { User, Calendar, Briefcase, ChevronRight, Play, Pause, RotateCcw, Search } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -61,6 +61,60 @@ export default function IncomingRequests() {
     }
   };
 
+  const handlePauseProject = async (projectId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/pause`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to pause project');
+      }
+
+      // Update local state to reflect PAUSED
+      setRequests(requests.map(req =>
+        req.id === projectId ? { ...req, agent_status: 'PAUSED' } : req
+      ));
+
+      if (selectedRequest && selectedRequest.id === projectId) {
+        setSelectedRequest({ ...selectedRequest, agent_status: 'PAUSED' });
+      }
+
+    } catch (err) {
+      alert(`Error pausing project: ${err.message}`);
+    }
+  };
+
+  const handleResumeProject = async (projectId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/resume`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to resume project');
+      }
+
+      // Update local state to reflect ANALYZING
+      setRequests(requests.map(req =>
+        req.id === projectId ? { ...req, agent_status: 'ANALYZING' } : req
+      ));
+
+      if (selectedRequest && selectedRequest.id === projectId) {
+        setSelectedRequest({ ...selectedRequest, agent_status: 'ANALYZING' });
+      }
+
+    } catch (err) {
+      alert(`Error resuming project: ${err.message}`);
+    }
+  };
+
   const handleOpenChat = (request) => {
     const existingMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
     const hasMessagesForProject = existingMessages.some(msg => msg.projectId === request.client_project_id);
@@ -107,14 +161,74 @@ export default function IncomingRequests() {
     navigate(`/messages?projectId=${request.client_project_id}`);
   };
 
+  // Helper to get the status badge class
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'PENDING_ANALYSIS': return 'badge-blue';
+      case 'ANALYZING': return 'badge-orange';
+      case 'PAUSED': return 'badge-amber';
+      case 'PROPOSAL_GENERATED': return 'badge-green';
+      default: return 'badge-orange';
+    }
+  };
+
+  // Helper to get display label for status
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'PROPOSAL_GENERATED': return 'APPROVED';
+      case 'PAUSED': return 'PAUSED';
+      default: return status;
+    }
+  };
+
+  // Helper to render the action button based on status
+  const renderActionButton = (request) => {
+    switch (request.agent_status) {
+      case 'PENDING_ANALYSIS':
+        return (
+          <button
+            className="btn-primary"
+            onClick={() => handleAssignToAI(request.id)}
+          >
+            <Play size={16} /> Assign to AI
+          </button>
+        );
+      case 'ANALYZING':
+        return (
+          <button
+            className="btn-warning"
+            onClick={() => handlePauseProject(request.id)}
+          >
+            <Pause size={16} /> Pause
+          </button>
+        );
+      case 'PAUSED':
+        return (
+          <button
+            className="btn-success"
+            onClick={() => handleResumeProject(request.id)}
+          >
+            <RotateCcw size={16} /> Resume
+          </button>
+        );
+      default:
+        return (
+          <button className="btn-primary" disabled>
+            <Play size={16} /> Processing...
+          </button>
+        );
+    }
+  };
+
   const filteredRequests = requests.filter(request => {
     const matchesSearch = request.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           request.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           String(request.client_project_id).includes(searchQuery);
     
     if (filterStatus === 'All') return matchesSearch;
-    if (filterStatus === 'Analyse') return matchesSearch && request.agent_status === 'ANALYZING';
+    if (filterStatus === 'Analyse') return matchesSearch && (request.agent_status === 'ANALYZING' || request.agent_status === 'PAUSED');
     if (filterStatus === 'Pending') return matchesSearch && request.agent_status === 'PENDING_ANALYSIS';
+    if (filterStatus === 'Paused') return matchesSearch && request.agent_status === 'PAUSED';
     if (filterStatus === 'Approved') return matchesSearch && request.agent_status === 'PROPOSAL_GENERATED';
     if (filterStatus === 'Rejected') return matchesSearch && request.agent_status === 'REJECTED';
     
@@ -143,6 +257,7 @@ export default function IncomingRequests() {
           <button className={`filter-tab ${filterStatus === 'All' ? 'active' : ''}`} onClick={() => setFilterStatus('All')}>All</button>
           <button className={`filter-tab ${filterStatus === 'Analyse' ? 'active' : ''}`} onClick={() => setFilterStatus('Analyse')}>Analyse</button>
           <button className={`filter-tab ${filterStatus === 'Pending' ? 'active' : ''}`} onClick={() => setFilterStatus('Pending')}>Pending</button>
+          <button className={`filter-tab ${filterStatus === 'Paused' ? 'active' : ''}`} onClick={() => setFilterStatus('Paused')}>Paused</button>
           <button className={`filter-tab ${filterStatus === 'Approved' ? 'active' : ''}`} onClick={() => setFilterStatus('Approved')}>Approved</button>
           <button className={`filter-tab ${filterStatus === 'Rejected' ? 'active' : ''}`} onClick={() => setFilterStatus('Rejected')}>Rejected</button>
         </div>
@@ -163,8 +278,8 @@ export default function IncomingRequests() {
               <div className="request-card-header">
                 <div className="request-title-group">
                   <h3>{request.name}</h3>
-                  <span className={`status-badge ${request.agent_status === 'PENDING_ANALYSIS' ? 'badge-blue' : 'badge-orange'}`}>
-                    {request.agent_status === 'PROPOSAL_GENERATED' ? 'APPROVED' : request.agent_status}
+                  <span className={`status-badge ${getStatusBadgeClass(request.agent_status)}`}>
+                    {getStatusLabel(request.agent_status)}
                   </span>
                 </div>
                 <div className="request-meta">
@@ -191,13 +306,7 @@ export default function IncomingRequests() {
                 >
                   Chat
                 </button>
-                <button 
-                  className="btn-primary" 
-                  onClick={() => handleAssignToAI(request.id)}
-                  disabled={request.agent_status !== 'PENDING_ANALYSIS'}
-                >
-                  <Play size={16} /> {request.agent_status === 'PENDING_ANALYSIS' ? 'Assign to AI' : 'Processing...'}
-                </button>
+                {renderActionButton(request)}
               </div>
             </div>
           ))
@@ -320,13 +429,7 @@ export default function IncomingRequests() {
               >
                 Open Chat
               </button>
-              <button 
-                className="btn-primary"
-                onClick={() => handleAssignToAI(selectedRequest.id)}
-                disabled={selectedRequest.agent_status !== 'PENDING_ANALYSIS'}
-              >
-                <Play size={16} /> {selectedRequest.agent_status === 'PENDING_ANALYSIS' ? 'Assign to AI' : 'Processing...'}
-              </button>
+              {renderActionButton(selectedRequest)}
             </div>
           </div>
         </div>

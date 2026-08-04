@@ -1,5 +1,6 @@
 import time
 import json
+import threading
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 import database
@@ -36,7 +37,7 @@ def _build_project_context(project: models.IncomingProject) -> str:
 
 
 class AgentOrchestrator:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, pause_event: threading.Event = None):
         self.db = db
         self.llm = LLMClient()
         self.pm_agent = PMAgent()
@@ -45,6 +46,31 @@ class AgentOrchestrator:
         self.cost_agent = CostAgent()
         self.timeline_agent = TimelineAgent()
         self.risk_agent = RiskAgent()
+        # If no pause_event is provided, create one that is always set (never pauses)
+        if pause_event is None:
+            self.pause_event = threading.Event()
+            self.pause_event.set()
+        else:
+            self.pause_event = pause_event
+
+    def _check_pause(self, project: models.IncomingProject, next_agent_name: str):
+        """Checkpoint between agent steps. Blocks if the pause event is cleared."""
+        if not self.pause_event.is_set():
+            # Status was already set to PAUSED by the router endpoint
+            _save_message(self.db, project, "PM Agent", "pm",
+                f"⏸️ Processing has been paused before {next_agent_name}. "
+                f"Waiting for user to resume...")
+            print(f"[ORCHESTRATOR] Paused before {next_agent_name} for project {project.id}")
+
+            # Block until the event is set again (resume)
+            self.pause_event.wait()
+
+            # Resumed — update status back to ANALYZING
+            project.agent_status = "ANALYZING"
+            self.db.commit()
+            _save_message(self.db, project, "PM Agent", "pm",
+                f"▶️ Processing resumed! Continuing with {next_agent_name}...")
+            print(f"[ORCHESTRATOR] Resumed at {next_agent_name} for project {project.id}")
 
     def process_incoming_request(self, project_id: int):
         print(f"[ORCHESTRATOR] Starting processing for incoming project {project_id}")
@@ -72,6 +98,9 @@ class AgentOrchestrator:
 
         time.sleep(1)
 
+        # ─── CHECKPOINT: before BA Agent ─────────────────────────────────────
+        self._check_pause(project, "BA Agent")
+
         # ─── BA AGENT ────────────────────────────────────────────────────────
         _save_message(self.db, project, "BA Agent", "ba",
             f"✅ Task received from PM Agent. Analyzing business requirements for \"{project.name}\"...")
@@ -94,6 +123,9 @@ class AgentOrchestrator:
 
         time.sleep(1)
 
+        # ─── CHECKPOINT: before Technical Agent ──────────────────────────────
+        self._check_pause(project, "Technical Agent")
+
         # ─── TECHNICAL AGENT ─────────────────────────────────────────────────
         _save_message(self.db, project, "Technical Agent", "tech",
             f"✅ Task received from PM Agent. Designing technical architecture for \"{project.name}\"...")
@@ -114,6 +146,9 @@ class AgentOrchestrator:
             f"📨 Reporting to PM Agent.")
 
         time.sleep(1)
+
+        # ─── CHECKPOINT: before Cost Agent ───────────────────────────────────
+        self._check_pause(project, "Cost Agent")
 
         # ─── COST AGENT ──────────────────────────────────────────────────────
         _save_message(self.db, project, "Cost Agent", "cost",
@@ -138,6 +173,9 @@ class AgentOrchestrator:
 
         time.sleep(1)
 
+        # ─── CHECKPOINT: before Timeline Agent ──────────────────────────────
+        self._check_pause(project, "Timeline Agent")
+
         # ─── TIMELINE AGENT ──────────────────────────────────────────────────
         _save_message(self.db, project, "Timeline Agent", "timeline",
             f"✅ Task received from PM Agent. Planning delivery schedule for \"{project.name}\"...")
@@ -160,6 +198,9 @@ class AgentOrchestrator:
             f"📨 Reporting to PM Agent.")
 
         time.sleep(1)
+
+        # ─── CHECKPOINT: before Risk Agent ───────────────────────────────────
+        self._check_pause(project, "Risk Agent")
 
         # ─── RISK AGENT ──────────────────────────────────────────────────────
         _save_message(self.db, project, "Risk Agent", "risk",

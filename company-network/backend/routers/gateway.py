@@ -1,10 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
+import threading
 import models, schemas, database, auth
 from agents.orchestrator import AgentOrchestrator
 
 router = APIRouter(prefix="/api/gateway", tags=["gateway"])
+
+# ── In-memory registry of pause events for running orchestrations ────────────
+# Maps project_id -> threading.Event (set = running, cleared = paused)
+_pause_events: dict[int, threading.Event] = {}
 
 @router.post("/receive-request", response_model=schemas.IncomingProjectResponse)
 def receive_client_request(
@@ -53,13 +58,21 @@ def get_incoming_requests(
     return requests
 
 def run_orchestrator(project_id: int):
+    """Run the agent orchestrator in a background thread with pause support."""
+    # Create a pause event (initially set = running)
+    pause_event = threading.Event()
+    pause_event.set()
+    _pause_events[project_id] = pause_event
+
     # Create a fresh database session for the background task
     db = database.SessionLocal()
     try:
-        orchestrator = AgentOrchestrator(db)
+        orchestrator = AgentOrchestrator(db, pause_event=pause_event)
         orchestrator.process_incoming_request(project_id)
     finally:
         db.close()
+        # Clean up the event from the registry when done
+        _pause_events.pop(project_id, None)
 
 @router.post("/incoming-requests/{project_id}/assign-ai")
 def assign_ai_to_request(
@@ -80,6 +93,63 @@ def assign_ai_to_request(
     background_tasks.add_task(run_orchestrator, project_id)
     
     return {"message": "Agent orchestration started", "project_id": project_id}
+
+@router.post("/incoming-requests/{project_id}/pause")
+def pause_project_processing(
+    project_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Pause an in-progress AI analysis. The orchestrator will stop at the next checkpoint."""
+    project = db.query(models.IncomingProject).filter(models.IncomingProject.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.agent_status not in ("ANALYZING", "PENDING_ANALYSIS"):
+        raise HTTPException(status_code=400, detail="Project is not currently being analyzed")
+
+    # Clear the event if an active orchestrator thread exists
+    pause_event = _pause_events.get(project_id)
+    if pause_event:
+        pause_event.clear()
+
+    # Update the status immediately so the frontend reflects it
+    project.agent_status = "PAUSED"
+    db.commit()
+
+    print(f"[GATEWAY] Paused processing for project {project_id}")
+    return {"message": "Project processing paused", "project_id": project_id}
+
+@router.post("/incoming-requests/{project_id}/resume")
+def resume_project_processing(
+    project_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Resume a paused AI analysis."""
+    project = db.query(models.IncomingProject).filter(models.IncomingProject.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.agent_status != "PAUSED":
+        raise HTTPException(status_code=400, detail="Project is not currently paused")
+
+    pause_event = _pause_events.get(project_id)
+    if pause_event:
+        # Active orchestrator thread exists — unblock it
+        pause_event.set()
+        project.agent_status = "ANALYZING"
+        db.commit()
+    else:
+        # No active thread (e.g. server restarted while paused) — re-trigger orchestrator
+        project.agent_status = "ANALYZING"
+        db.commit()
+        background_tasks.add_task(run_orchestrator, project_id)
+        print(f"[GATEWAY] No active thread found — re-launching orchestrator for project {project_id}")
+
+    print(f"[GATEWAY] Resumed processing for project {project_id}")
+    return {"message": "Project processing resumed", "project_id": project_id}
 
 @router.get("/agent-messages/{client_project_id}", response_model=List[schemas.AgentChatMessageResponse])
 def get_agent_messages(
