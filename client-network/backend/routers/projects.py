@@ -46,6 +46,9 @@ def create_project(
         budget_range=project.budget_range,
         key_features=project.key_features,
         existing_systems=project.existing_systems,
+        project_type=project.project_type or "Not specified",
+        ui_ux_design=project.ui_ux_design or "Not specified",
+        status="AWAITING_APPROVAL",
         user_id=current_user.id
     )
     db.add(new_project)
@@ -162,6 +165,45 @@ def chat_with_agent(
         db.add(user_msg_record)
         db.commit()
 
+        # Check if project exists and status is AWAITING_APPROVAL
+        if project and project.status == "AWAITING_APPROVAL":
+            msg_lower = chat_request.message.strip().lower().strip("!.,")
+            approval_phrases = [
+                "ok", "approve", "approved", "looks good", "yes", "proceed", "correct", 
+                "fine", "agree", "go ahead", "confirm", "yes, proceed", "yes proceed", 
+                "looks good to me", "that's correct", "perfect", "ok proceed", "ok approve",
+                "yes proceed and share"
+            ]
+            is_approval = any(phrase == msg_lower or (phrase in msg_lower and len(msg_lower) < len(phrase) + 5) for phrase in approval_phrases)
+            has_change_keywords = any(kw in msg_lower for kw in ["change", "modify", "update", "correct to", "instead", "but", "edit"])
+            
+            if is_approval and not has_change_keywords:
+                # Approve the project and submit to company network!
+                project.status = "SUBMITTED"
+                db.commit()
+                db.refresh(project)
+                
+                # Trigger background transmission
+                background_tasks.add_task(transmit_to_company_network, project)
+                
+                reply_text = "Thank you! The project requirements have been approved and successfully transmitted to the Company Network. Our team is now generating the final proposal."
+                
+                # Save the agent's reply
+                agent_msg_record = models.ChatMessageRecord(
+                    user_id=current_user.id,
+                    project_id=project.id,
+                    sender="agent",
+                    text=reply_text
+                )
+                db.add(agent_msg_record)
+                db.commit()
+                
+                return {
+                    "reply": reply_text,
+                    "is_complete": True,
+                    "project_id": project.id
+                }
+
         llm_client = LLMClient()
         # Build history from the database for this project/conversation
         db_history = db.query(models.ChatMessageRecord).filter(
@@ -171,16 +213,17 @@ def chat_with_agent(
         history_dicts = [{"sender": m.sender, "text": m.text} for m in db_history]
         
         system_prompt = (
-            "You are a strict Project Requirement Assistant. "
+            "You are a friendly and professional Project Requirement Assistant. "
             "Your ONLY goal is to interactively chat with the client and gather software project requirements. "
-            "Be concise, polite, and ask one clear question at a time to uncover missing details like budget, timeline, target audience, and key features. "
-            "Once you have gathered ALL necessary details (project name, description, target platforms, target audience, expected timeline, budget range, key features, and existing systems), "
-            "mark the conversation as complete internally. Your reply should be a natural confirmation like 'Thank you! I have all the details I need. Your project requirements are being submitted for review.' "
+            "Be concise, polite, and ask one clear question at a time to uncover missing details like project name, description, project type (e.g. e-commerce, healthcare, CRM), UI/UX design preferences, budget, timeline, target audience, key features, and existing systems. "
+            "IMPORTANT: If the client corrects or updates any previously provided information (e.g. budget, timeline, features), "
+            "always accept the correction gracefully. Say something like 'Got it, I have updated that.' and continue with the next question. Never argue, challenge, or dismiss corrections. "
+            "Once you have gathered ALL necessary details (project name, description, project type, UI/UX design, target platforms, target audience, expected timeline, budget range, key features, and existing systems), "
+            "mark the conversation as complete internally by setting is_complete to True. Your reply should be a natural confirmation like 'Thank you! I have all the details I need. Let me compile the requirements summary for your approval.' "
             "IMPORTANT: NEVER include internal field names, JSON keys, or technical instructions (like 'is_complete', 'set to true', etc.) in your reply to the client. Your reply must always be natural, human-readable text. "
-            "ABSOLUTE RULE: Under no circumstances should you answer questions, provide information, or chat about topics unrelated to gathering project requirements. "
-            "If the user says anything unrelated (e.g., general knowledge, casual chat, math, code), reply exactly with: 'Please ask queries only related to our project requirement.'"
+            "ABSOLUTE RULE: Under no circumstances should you answer questions, provide information, or chat about topics completely unrelated to the project (e.g., general knowledge, casual chat, math, code). "
+            "If the user says anything completely unrelated, politely redirect: 'I appreciate the conversation! However, I am here to help with your project requirements. Could we continue with that?'"
         )
-        
         
         # Get structured response from LLM
         response = llm_client.generate_chat_response(
@@ -194,6 +237,8 @@ def chat_with_agent(
         
         # If the LLM has decided requirements are complete
         if response.is_complete:
+            is_corrected = project is not None
+            
             if project:
                 # Update existing project
                 project.name = response.project_name or project.name
@@ -204,10 +249,12 @@ def chat_with_agent(
                 project.budget_range = response.budget_range or project.budget_range
                 project.key_features = response.key_features or project.key_features
                 project.existing_systems = response.existing_systems or project.existing_systems
-                project.status = "SUBMITTED"
+                project.project_type = response.project_type or project.project_type
+                project.ui_ux_design = response.ui_ux_design or project.ui_ux_design
+                project.status = "AWAITING_APPROVAL"
                 db.commit()
                 db.refresh(project)
-                print(f"[*] Updated existing project {project.id} with extracted requirements.")
+                print(f"[*] Updated existing project {project.id} with extracted requirements (Awaiting Approval).")
             else:
                 # Create a new project
                 project = models.Project(
@@ -219,20 +266,43 @@ def chat_with_agent(
                     budget_range=response.budget_range or "Not specified",
                     key_features=response.key_features or "Not specified",
                     existing_systems=response.existing_systems or "Not specified",
-                    status="SUBMITTED",
+                    project_type=response.project_type or "Not specified",
+                    ui_ux_design=response.ui_ux_design or "Not specified",
+                    status="AWAITING_APPROVAL",
                     user_id=current_user.id
                 )
                 db.add(project)
                 db.commit()
                 db.refresh(project)
                 new_project_id = project.id
-                print(f"[*] Created new project {project.id} from chat.")
+                print(f"[*] Created new project {project.id} from chat (Awaiting Approval).")
 
-            # Append transmission notice to reply
-            reply_text += "\n\n✅ All project requirements have been gathered successfully. Your project is now being securely transmitted to our Company Network for review and proposal generation. You will be notified once the analysis is complete."
+            # Generate the SRS summary in the requested format
+            title = "📋 Corrected Project Requirements Summary" if is_corrected else "📋 Project Requirements Summary"
             
-            # Trigger A2A background transmission
-            background_tasks.add_task(transmit_to_company_network, project)
+            srs_text = (
+                f"{title}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🔹 Project Name     : {project.name or 'Not specified'}\n"
+                f"🔹 Description      : {project.description or 'Not specified'}\n"
+                f" \n"
+                f"[Project Type]: {project.project_type or 'Not specified'}\n"
+                f" \n"
+                f"[UI/UX Design]: {project.ui_ux_design or 'Not specified'}\n"
+                f"🔹 Target Platforms : {project.target_platforms or 'Not specified'}\n"
+                f"🔹 Target Audience  : {project.target_audience or 'Not specified'}\n"
+                f"🔹 Timeline         : {project.expected_timeline or 'Not specified'}\n"
+                f"🔹 Budget Range     : {project.budget_range or 'Not specified'}\n"
+                f"🔹 Key Features     : {project.key_features or 'Not specified'}\n"
+                f"🔹 Existing Systems : {project.existing_systems or 'Not specified'}\n"
+                f"━━━━━━━━━━━━━━━━━"
+            )
+            
+            reply_text = (
+                f"{srs_text}\n\n"
+                f"Please review the summary above. If it looks correct, reply with **Approve** or **OK** "
+                f"to submit this project to the Company Network. If you'd like to change anything, just let me know!"
+            )
             
         final_project_id = project.id if project else project_id
 

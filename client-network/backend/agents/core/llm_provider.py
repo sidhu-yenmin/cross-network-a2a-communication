@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class AgentChatResponse(BaseModel):
     reply: str = Field(description="MANDATORY. Your conversational reply to the client. This field MUST always contain a non-empty string. If is_complete is true, write a brief confirmation message. If gathering info, ask the next question. NEVER leave this blank.")
-    is_complete: bool = Field(description="Set to true ONLY if you have gathered ALL necessary information (name, description, target platforms, target audience, expected timeline, budget range, key features, existing systems) and are ready to finalize.")
+    is_complete: bool = Field(description="Set to true ONLY if you have gathered ALL necessary information (name, description, project type, UI/UX design, target platforms, target audience, expected timeline, budget range, key features, existing systems) and are ready to finalize.")
     project_name: str = Field(default="", description="The name of the project")
     description: str = Field(default="", description="Detailed requirements of the project")
     target_platforms: str = Field(default="", description="Target platforms (e.g., Web, iOS, Android)")
@@ -16,6 +16,8 @@ class AgentChatResponse(BaseModel):
     budget_range: str = Field(default="", description="The client's budget range")
     key_features: str = Field(default="", description="Key features required")
     existing_systems: str = Field(default="", description="Existing systems to integrate with")
+    project_type: str = Field(default="", description="The type of project (e.g., E-commerce, Healthcare, CRM, etc.)")
+    ui_ux_design: str = Field(default="", description="The UI/UX design requirements or preferences")
 
 class LLMClient:
     def __init__(self, config_path: str = "config.json"):

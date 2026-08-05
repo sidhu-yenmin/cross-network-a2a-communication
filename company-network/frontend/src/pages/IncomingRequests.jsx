@@ -11,7 +11,7 @@ export default function IncomingRequests() {
   const [error, setError] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState(location.state?.defaultTab || 'All');
+  const [filterStatus, setFilterStatus] = useState(location.state?.defaultTab || 'Analyse');
   const { token } = useAuth();
 
   useEffect(() => {

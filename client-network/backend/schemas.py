@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
+from typing import List, Optional
 
 class UserCreate(BaseModel):
     full_name: str
@@ -42,6 +43,8 @@ class ProjectCreate(BaseModel):
     budget_range: str = Field(..., min_length=1, description="Estimated budget range")
     key_features: str = Field(..., min_length=1, description="List of must-have features")
     existing_systems: str = Field(..., min_length=1, description="Existing systems to integrate with")
+    project_type: Optional[str] = Field(default=None, description="Type of project")
+    ui_ux_design: Optional[str] = Field(default=None, description="UI/UX design details")
 
 class ProjectResponse(BaseModel):
     id: int
@@ -54,13 +57,13 @@ class ProjectResponse(BaseModel):
     budget_range: str | None
     key_features: str | None
     existing_systems: str | None
+    project_type: str | None = None
+    ui_ux_design: str | None = None
     status: str
     created_at: datetime
 
     class Config:
         from_attributes = True
-
-from typing import List, Optional
 
 class ChatMessage(BaseModel):
     sender: str

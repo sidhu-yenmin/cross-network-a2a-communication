@@ -183,6 +183,8 @@ export default function Projects() {
 
   const getStatusIcon = (status) => {
     switch (status) {
+      case 'AWAITING_APPROVAL':
+        return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0.75rem', background: 'rgba(249, 115, 22, 0.15)', color: '#ea580c', borderRadius: '999px', fontSize: '0.875rem' }}><Clock size={14} /> AWAITING APPROVAL</span>;
       case 'SUBMITTED':
       case 'PENDING ANALYSIS':
         return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0.75rem', background: 'rgba(234, 179, 8, 0.1)', color: '#eab308', borderRadius: '999px', fontSize: '0.875rem' }}><Clock size={14} /> {status}</span>;
@@ -204,7 +206,7 @@ export default function Projects() {
             <h1>Active Projects</h1>
             <p>Track the status of your requirements and ongoing work.</p>
           </div>
-          <button className="btn-primary" style={{ width: 'auto' }} onClick={handleOpenCreateModal}>
+          <button className="btn-primary" style={{ width: 'auto' }} onClick={() => navigate('/messages')}>
             <Plus size={18} /> New Request
           </button>
         </div>

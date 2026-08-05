@@ -29,6 +29,8 @@ class Project(Base):
     budget_range = Column(String, nullable=True)
     key_features = Column(String, nullable=True)
     existing_systems = Column(String, nullable=True)
+    project_type = Column(String, nullable=True)
+    ui_ux_design = Column(String, nullable=True)
 
     status = Column(String, default="SUBMITTED")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

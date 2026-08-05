@@ -172,22 +172,22 @@ const ProposalAccordion = ({ project, defaultOpen = false }) => {
               <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100 mt-6">
                 {isEditing ? (
                   <>
-                    <button className="btn-outline text-gray-500 border-gray-300 w-full justify-center" onClick={handleCancel}>
+                    {/* <button className="btn-outline text-gray-500 border-gray-300 w-full justify-center" onClick={handleCancel}>
                       <X size={16} /> Cancel
                     </button>
                     <button className="btn-primary bg-green-600 hover:bg-green-700 border-green-600 w-full justify-center" onClick={handleSave}>
                       <Save size={16} /> Save Changes
-                    </button>
+                    </button> */}
                   </>
                 ) : (
                   <>
-                    <button 
+                    {/* <button 
                       className="btn-outline w-full justify-center" 
                       onClick={() => setIsEditing(true)}
                       style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)', background: 'transparent' }}
                     >
                       <Edit3 size={16} /> Modify
-                    </button>
+                    </button> */}
                     <button 
                       className="btn-primary w-full justify-center"
                       style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}

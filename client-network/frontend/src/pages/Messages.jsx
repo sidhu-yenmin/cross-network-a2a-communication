@@ -251,6 +251,35 @@ export default function Messages() {
                 </button>
               </div>
             )}
+            {/* Quick Reply Button for SRS Approval */}
+            {displayedMessages.length > 0 && 
+             displayedMessages[displayedMessages.length - 1].sender === 'agent' && 
+             (displayedMessages[displayedMessages.length - 1].text.includes('review the summary') ||
+              displayedMessages[displayedMessages.length - 1].text.includes('corrected summary')) && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem' }}>
+                <button 
+                  onClick={() => {
+                    setInputValue("Approve");
+                    setTimeout(() => {
+                      document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                    }, 50);
+                  }}
+                  style={{
+                    background: '#16a34a',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1.25rem',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
+                  }}
+                >
+                  Approve SRS & Submit
+                </button>
+              </div>
+            )}
             {/* Typing Indicator */}
             {isTyping && (
               <div style={{ display: 'flex', gap: '1rem', flexDirection: 'row' }}>
