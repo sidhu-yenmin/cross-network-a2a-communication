@@ -165,3 +165,25 @@ def get_agent_messages(
         .all()
     )
     return messages
+
+@router.post("/incoming-requests-by-client/{client_project_id}/approve")
+def approve_incoming_request_by_client(
+    client_project_id: int,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.IncomingProject).filter(
+        models.IncomingProject.client_project_id == client_project_id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.agent_status = "APPROVED"
+    db.commit()
+    
+    # Save a chat message in the company network agent log as well
+    from agents.orchestrator import _save_message
+    _save_message(db, project, "PM Agent", "pm", 
+        f"🎉 The client has reviewed and APPROVED the proposal! Proceeding with final onboarding.")
+        
+    print(f"[GATEWAY] Client Project {client_project_id} proposal APPROVED by client")
+    return {"message": "Project status updated to APPROVED"}

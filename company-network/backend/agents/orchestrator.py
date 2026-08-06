@@ -281,6 +281,29 @@ class AgentOrchestrator:
         project.agent_status = "PROPOSAL_GENERATED"
         self.db.commit()
 
+        # Transmit back to Client Network to list/show the reports to the client agent
+        try:
+            import urllib.request
+            client_payload = {
+                "project_name": project.name,
+                "ba_analysis": ba_analysis,
+                "tech_analysis": tech_analysis,
+                "cost_analysis": cost_analysis,
+                "timeline_analysis": timeline_analysis,
+                "risk_analysis": risk_analysis
+            }
+            data_bytes = json.dumps(client_payload).encode("utf-8")
+            url = f"http://localhost:8001/api/projects/{project.client_project_id}/receive-proposal"
+            req = urllib.request.Request(
+                url,
+                data=data_bytes,
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req) as resp:
+                print(f"[ORCHESTRATOR] Successfully transmitted proposal back to Client Network. Code: {resp.status}")
+        except Exception as e:
+            print(f"[ORCHESTRATOR] Failed to transmit proposal back to Client Network: {e}")
+
         _save_message(self.db, project, "PM Agent", "pm",
             f"🎉 Proposal for \"{project.name}\" is ready!\n"
             f"All specialist agents have completed their analysis. "

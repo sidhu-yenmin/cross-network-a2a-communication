@@ -108,6 +108,65 @@ def transmit_project(
     background_tasks.add_task(transmit_to_company_network, project)
     return {"message": "Project transmission to Company Network initiated."}
 
+from pydantic import BaseModel as PydanticBaseModel
+
+class ProposalPayload(PydanticBaseModel):
+    project_name: str
+    ba_analysis: str
+    tech_analysis: str
+    cost_analysis: str
+    timeline_analysis: str
+    risk_analysis: str
+
+@router.post("/{project_id}/receive-proposal")
+def receive_proposal_from_company(
+    project_id: int,
+    payload: ProposalPayload,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Update project status
+    project.status = "NEGOTIATING"
+    db.commit()
+
+    # Format the report beautifully
+    report_text = (
+        f"🎉 **AI Agent Proposal Analysis Complete**\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"Our specialist AI agents have completed their respective analyses for project: **{payload.project_name}**.\n\n"
+        f"Here are the detailed reports:\n\n"
+        f"📊 **Business Analysis Report (BA Agent)**\n"
+        f"{payload.ba_analysis}\n\n"
+        f"🏗️ **Technical Architecture Report (Tech Agent)**\n"
+        f"{payload.tech_analysis}\n\n"
+        f"💰 **Cost Estimation Report (Cost Agent)**\n"
+        f"{payload.cost_analysis}\n\n"
+        f"📅 **Timeline & Delivery Report (Timeline Agent)**\n"
+        f"{payload.timeline_analysis}\n\n"
+        f"⚠️ **Risk Assessment Report (Risk Agent)**\n"
+        f"{payload.risk_analysis}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📝 **Proposal Review Request**\n"
+        f"Please review the detailed analysis above. If you approve of the technical architecture, timeline, cost estimates, and risk mitigations, reply with **Approve Proposal** or **OK** to proceed. If you have any questions or require changes, please let me know!"
+    )
+
+    # Save to ChatMessageRecord
+    msg = models.ChatMessageRecord(
+        user_id=project.user_id,
+        project_id=project.id,
+        sender="agent",
+        text=report_text
+    )
+    db.add(msg)
+    db.commit()
+
+    print(f"[*] Successfully saved proposal chat message for client project {project_id}")
+    return {"message": "Proposal received and client notified"}
+
+
 from typing import Optional
 
 @router.get("/chat/history", response_model=List[schemas.ChatMessageResponse])
@@ -187,6 +246,52 @@ def chat_with_agent(
                 background_tasks.add_task(transmit_to_company_network, project)
                 
                 reply_text = "Thank you! The project requirements have been approved and successfully transmitted to the Company Network. Our team is now generating the final proposal."
+                
+                # Save the agent's reply
+                agent_msg_record = models.ChatMessageRecord(
+                    user_id=current_user.id,
+                    project_id=project.id,
+                    sender="agent",
+                    text=reply_text
+                )
+                db.add(agent_msg_record)
+                db.commit()
+                
+                return {
+                    "reply": reply_text,
+                    "is_complete": True,
+                    "project_id": project.id
+                }
+
+        # Check if project exists and status is NEGOTIATING
+        if project and project.status == "NEGOTIATING":
+            msg_lower = chat_request.message.strip().lower().strip("!.,")
+            approval_phrases = [
+                "ok", "approve", "approved", "looks good", "yes", "proceed", "correct", 
+                "fine", "agree", "go ahead", "confirm", "yes, proceed", "yes proceed", 
+                "looks good to me", "that's correct", "perfect", "ok proceed", "ok approve",
+                "approve proposal", "accept", "accept proposal"
+            ]
+            is_approval = any(phrase == msg_lower or (phrase in msg_lower and len(msg_lower) < len(phrase) + 5) for phrase in approval_phrases)
+            has_change_keywords = any(kw in msg_lower for kw in ["change", "modify", "update", "correct to", "instead", "but", "edit"])
+            
+            if is_approval and not has_change_keywords:
+                # Approve the proposal!
+                project.status = "APPROVED"
+                db.commit()
+                db.refresh(project)
+                
+                # Make cross-network POST call to Company Network to approve the proposal there
+                try:
+                    import urllib.request
+                    url = f"http://localhost:8000/api/gateway/incoming-requests-by-client/{project.id}/approve"
+                    req = urllib.request.Request(url, method="POST")
+                    with urllib.request.urlopen(req) as resp:
+                        print(f"[*] Company Network proposal marked APPROVED. Code: {resp.status}")
+                except Exception as e:
+                    print(f"[*] Failed to sync proposal approval to Company Network: {e}")
+
+                reply_text = "Thank you! The proposal has been successfully approved. We will proceed with the project setup and contact you shortly with the next steps."
                 
                 # Save the agent's reply
                 agent_msg_record = models.ChatMessageRecord(

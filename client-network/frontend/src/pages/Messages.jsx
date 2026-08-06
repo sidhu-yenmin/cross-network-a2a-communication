@@ -280,6 +280,34 @@ export default function Messages() {
                 </button>
               </div>
             )}
+            {/* Quick Reply Button for Proposal Approval */}
+            {displayedMessages.length > 0 && 
+             displayedMessages[displayedMessages.length - 1].sender === 'agent' && 
+             displayedMessages[displayedMessages.length - 1].text.includes('Proposal Review Request') && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem' }}>
+                <button 
+                  onClick={() => {
+                    setInputValue("Approve Proposal");
+                    setTimeout(() => {
+                      document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                    }, 50);
+                  }}
+                  style={{
+                    background: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1.25rem',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  Approve Proposal
+                </button>
+              </div>
+            )}
             {/* Typing Indicator */}
             {isTyping && (
               <div style={{ display: 'flex', gap: '1rem', flexDirection: 'row' }}>
