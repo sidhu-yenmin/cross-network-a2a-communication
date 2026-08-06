@@ -145,47 +145,25 @@ export default function Messages() {
             <h1>Chat</h1>
             <p>Communicate with your assigned Client Representative Agent.</p>
           </div>
-          {projectId ? (
-            <button 
-              onClick={() => navigate('/projects?new=true')}
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                padding: '0.6rem 1.25rem', 
-                background: 'var(--primary-accent)', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '999px', 
-                fontWeight: '600', 
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => { e.currentTarget.style.background = 'var(--primary-accent-hover)'; }}
-              onMouseOut={(e) => { e.currentTarget.style.background = 'var(--primary-accent)'; }}
-            >
-              <Plus size={16} /> New Request
-            </button>
-          ) : (
-            <button 
-              onClick={() => navigate('/projects')}
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                padding: '0.6rem 1.25rem', 
-                background: 'rgba(99, 102, 241, 0.1)', 
-                color: 'var(--primary-accent)', 
-                border: '1px solid rgba(99, 102, 241, 0.2)', 
-                borderRadius: '999px', 
-                fontWeight: '600', 
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)'; e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)'; }}
-              onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'; e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.2)'; }}
-            >
-              <Briefcase size={16} /> View Projects
-            </button>
-          )}
+          <button 
+            onClick={() => navigate('/projects')}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.5rem', 
+              padding: '0.6rem 1.25rem', 
+              background: 'rgba(99, 102, 241, 0.1)', 
+              color: 'var(--primary-accent)', 
+              border: '1px solid rgba(99, 102, 241, 0.2)', 
+              borderRadius: '999px', 
+              fontWeight: '600', 
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)'; e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'; e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.2)'; }}
+          >
+            <Briefcase size={16} /> View Projects
+          </button>
         </div>
 
         <div className="glass-container dashboard-card" style={{ flex: 1, padding: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '500px' }}>
