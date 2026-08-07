@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 import database
 import models
-from .agent_definitions import PMAgent, BAAgent, TechnicalAgent, CostAgent, TimelineAgent, RiskAgent
+from .agent_definitions import PMAgent, BAAgent, TechnicalAgent, CostAgent, TimelineAgent, RiskAgent, ClientAgent
 from .core.llm_provider import LLMClient
 
 
@@ -281,6 +281,35 @@ class AgentOrchestrator:
         project.agent_status = "PROPOSAL_GENERATED"
         self.db.commit()
 
+        # ─── CLIENT REPRESENTATIVE AGENT: REVIEW & PRESENT ──────────────────
+        _save_message(self.db, project, "PM Agent", "pm",
+            f"🔄 Delegating compiled proposal to the Client Agent for review and presentation...")
+        
+        client_agent = ClientAgent()
+        client_prompt = (
+            f"Please review the compiled software proposal on behalf of the client:\n\n"
+            f"Project Name: {project.name}\n"
+            f"Project Description: {project.description}\n\n"
+            f"Specialist Agent Reports:\n"
+            f"1. Business Analyst Specialist (BA Agent):\n{ba_analysis}\n\n"
+            f"2. Solution Architect (Technical Agent):\n{tech_analysis}\n\n"
+            f"3. Cost Estimation Specialist (Cost Agent):\n{cost_analysis}\n\n"
+            f"4. Delivery Planner (Timeline Agent):\n{timeline_analysis}\n\n"
+            f"5. Risk Analyst (Risk Agent):\n{risk_analysis}\n\n"
+            f"Your Goal:\n"
+            f"- Identify any suggestions, doubts, or queries raised by the specialist agents.\n"
+            f"- Format a detailed proposal presentation report containing architecture, timeline, cost estimates, and suggestions/clarifications.\n"
+            f"- Address the client directly as their Representative Agent. Be clear, professional, and friendly."
+        )
+        
+        client_report = self.llm.analyze(
+            system_prompt=client_agent.system_prompt,
+            user_message=client_prompt
+        )
+
+        _save_message(self.db, project, "Client Agent", "client",
+            f"📋 Proposal review complete. Summarized suggestions, estimates, and architecture. Transmitting back to the client portal...")
+
         # Transmit back to Client Network to list/show the reports to the client agent
         try:
             import urllib.request
@@ -290,7 +319,8 @@ class AgentOrchestrator:
                 "tech_analysis": tech_analysis,
                 "cost_analysis": cost_analysis,
                 "timeline_analysis": timeline_analysis,
-                "risk_analysis": risk_analysis
+                "risk_analysis": risk_analysis,
+                "client_agent_report": client_report
             }
             data_bytes = json.dumps(client_payload).encode("utf-8")
             url = f"http://localhost:8001/api/projects/{project.client_project_id}/receive-proposal"

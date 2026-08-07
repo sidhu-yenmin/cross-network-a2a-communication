@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import urllib.request, json
 import models, schemas, database, dependencies
 
@@ -117,6 +117,7 @@ class ProposalPayload(PydanticBaseModel):
     cost_analysis: str
     timeline_analysis: str
     risk_analysis: str
+    client_agent_report: Optional[str] = None
 
 @router.post("/{project_id}/receive-proposal")
 def receive_proposal_from_company(
@@ -132,26 +133,37 @@ def receive_proposal_from_company(
     project.status = "NEGOTIATING"
     db.commit()
 
-    # Format the report beautifully
-    report_text = (
-        f"🎉 **AI Agent Proposal Analysis Complete**\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"Our specialist AI agents have completed their respective analyses for project: **{payload.project_name}**.\n\n"
-        f"Here are the detailed reports:\n\n"
-        f"📊 **Business Analysis Report (BA Agent)**\n"
-        f"{payload.ba_analysis}\n\n"
-        f"🏗️ **Technical Architecture Report (Tech Agent)**\n"
-        f"{payload.tech_analysis}\n\n"
-        f"💰 **Cost Estimation Report (Cost Agent)**\n"
-        f"{payload.cost_analysis}\n\n"
-        f"📅 **Timeline & Delivery Report (Timeline Agent)**\n"
-        f"{payload.timeline_analysis}\n\n"
-        f"⚠️ **Risk Assessment Report (Risk Agent)**\n"
-        f"{payload.risk_analysis}\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📝 **Proposal Review Request**\n"
-        f"Please review the detailed analysis above. If you approve of the technical architecture, timeline, cost estimates, and risk mitigations, reply with **Approve Proposal** or **OK** to proceed. If you have any questions or require changes, please let me know!"
-    )
+    # Format the report beautifully using Client Agent review if available, fallback otherwise
+    if payload.client_agent_report:
+        report_text = (
+            f"🤖 **Proposal Presentation & Report (Client Representative Agent)**\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"I have reviewed the proposal compiled by the company PM Agent. Here is my analysis and summary:\n\n"
+            f"{payload.client_agent_report}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📝 **Proposal Review Request**\n"
+            f"Please review the detailed analysis above. If you approve of the technical architecture, timeline, cost estimates, and risk mitigations, reply with **Approve Proposal** or **OK** to proceed. If you have any questions or require changes, please let me know!"
+        )
+    else:
+        report_text = (
+            f"🎉 **AI Agent Proposal Analysis Complete**\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Our specialist AI agents have completed their respective analyses for project: **{payload.project_name}**.\n\n"
+            f"Here are the detailed reports:\n\n"
+            f"📊 **Business Analysis Report (BA Agent)**\n"
+            f"{payload.ba_analysis}\n\n"
+            f"🏗️ **Technical Architecture Report (Tech Agent)**\n"
+            f"{payload.tech_analysis}\n\n"
+            f"💰 **Cost Estimation Report (Cost Agent)**\n"
+            f"{payload.cost_analysis}\n\n"
+            f"📅 **Timeline & Delivery Report (Timeline Agent)**\n"
+            f"{payload.timeline_analysis}\n\n"
+            f"⚠️ **Risk Assessment Report (Risk Agent)**\n"
+            f"{payload.risk_analysis}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📝 **Proposal Review Request**\n"
+            f"Please review the detailed analysis above. If you approve of the technical architecture, timeline, cost estimates, and risk mitigations, reply with **Approve Proposal** or **OK** to proceed. If you have any questions or require changes, please let me know!"
+        )
 
     # Save to ChatMessageRecord
     msg = models.ChatMessageRecord(
@@ -167,7 +179,7 @@ def receive_proposal_from_company(
     return {"message": "Proposal received and client notified"}
 
 
-from typing import Optional
+
 
 @router.get("/chat/history", response_model=List[schemas.ChatMessageResponse])
 def get_chat_history(
@@ -273,7 +285,7 @@ def chat_with_agent(
                 "approve proposal", "accept", "accept proposal"
             ]
             is_approval = any(phrase == msg_lower or (phrase in msg_lower and len(msg_lower) < len(phrase) + 5) for phrase in approval_phrases)
-            has_change_keywords = any(kw in msg_lower for kw in ["change", "modify", "update", "correct to", "instead", "but", "edit"])
+            has_change_keywords = any(kw in msg_lower for kw in ["change", "modify", "update", "correct to", "instead", "but", "edit", "reject", "not ok", "not okay", "no", "incorrect"])
             
             if is_approval and not has_change_keywords:
                 # Approve the proposal!
@@ -306,6 +318,39 @@ def chat_with_agent(
                 return {
                     "reply": reply_text,
                     "is_complete": True,
+                    "project_id": project.id
+                }
+            else:
+                # Reject the proposal / request changes!
+                # We keep the status as NEGOTIATING so the user can continue re-negotiating requirements
+                project.status = "NEGOTIATING"
+                db.commit()
+                
+                # Make cross-network POST call to Company Network to reject/suggest changes to the proposal
+                try:
+                    import urllib.request
+                    url = f"http://localhost:8000/api/gateway/incoming-requests-by-client/{project.id}/reject"
+                    req = urllib.request.Request(url, method="POST")
+                    with urllib.request.urlopen(req) as resp:
+                        print(f"[*] Company Network proposal marked REJECTED (suggestions logged). Code: {resp.status}")
+                except Exception as e:
+                    print(f"[*] Failed to sync proposal rejection to Company Network: {e}")
+
+                reply_text = "I have informed the PM Agent that you are not okay with the proposal report. We will review your feedback, make necessary adjustments, and present a revised proposal soon. What specific changes or clarifications would you like us to focus on?"
+                
+                # Save the agent's reply
+                agent_msg_record = models.ChatMessageRecord(
+                    user_id=current_user.id,
+                    project_id=project.id,
+                    sender="agent",
+                    text=reply_text
+                )
+                db.add(agent_msg_record)
+                db.commit()
+                
+                return {
+                    "reply": reply_text,
+                    "is_complete": False,
                     "project_id": project.id
                 }
 

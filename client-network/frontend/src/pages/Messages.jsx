@@ -73,7 +73,7 @@ export default function Messages() {
     setMessages(updatedMessages);
     localStorage.setItem(storageKey, JSON.stringify(updatedMessages));
     setInputValue('');
-    
+
     // Call backend API for real interactive LLM chat
     if (token) {
       // Get the history just for this project (or null if direct chat)
@@ -82,7 +82,7 @@ export default function Messages() {
         .map(m => ({ sender: m.sender, text: m.text }));
 
       const queryParam = projectId ? `?project_id=${projectId}` : '';
-      
+
       setIsTyping(true);
       fetch(`http://localhost:8001/api/projects/chat${queryParam}`, {
         method: 'POST',
@@ -95,44 +95,44 @@ export default function Messages() {
           history: history
         })
       })
-      .then(res => {
-        if (!res.ok) throw new Error("API response was not ok");
-        return res.json();
-      })
-      .then(data => {
-        // If a new project was created by the agent, update the URL
-        if (data.project_id && data.project_id !== projectId) {
-          navigate(`/messages?projectId=${data.project_id}`, { replace: true });
-          // Update the messages that had null projectId to the new one
+        .then(res => {
+          if (!res.ok) throw new Error("API response was not ok");
+          return res.json();
+        })
+        .then(data => {
+          // If a new project was created by the agent, update the URL
+          if (data.project_id && data.project_id !== projectId) {
+            navigate(`/messages?projectId=${data.project_id}`, { replace: true });
+            // Update the messages that had null projectId to the new one
+            setMessages(prev => {
+              const updated = prev.map(m => m.projectId === null ? { ...m, projectId: data.project_id } : m);
+              localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(updated));
+              return updated;
+            });
+          }
+
+          const replyMsg = {
+            id: Date.now().toString() + "-agent",
+            projectId: data.project_id || projectId,
+            sender: 'agent',
+            text: data.reply,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
           setMessages(prev => {
-            const updated = prev.map(m => m.projectId === null ? { ...m, projectId: data.project_id } : m);
-            localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(updated));
-            return updated;
+            const newUpdated = [...prev, replyMsg];
+            localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(newUpdated));
+            return newUpdated;
           });
-        }
 
-        const replyMsg = {
-          id: Date.now().toString() + "-agent",
-          projectId: data.project_id || projectId,
-          sender: 'agent',
-          text: data.reply,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => {
-          const newUpdated = [...prev, replyMsg];
-          localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(newUpdated));
-          return newUpdated;
-        });
-
-      })
-      .catch(err => console.error("Failed to get chat response:", err))
-      .finally(() => setIsTyping(false));
+        })
+        .catch(err => console.error("Failed to get chat response:", err))
+        .finally(() => setIsTyping(false));
     }
   };
 
   if (!token) return null;
 
-  const displayedMessages = projectId 
+  const displayedMessages = projectId
     ? messages.filter(msg => msg.projectId === projectId)
     : messages.filter(msg => msg.projectId === null);
 
@@ -145,16 +145,16 @@ export default function Messages() {
             <h1>Chat</h1>
             <p>Communicate with your assigned Client Representative Agent.</p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/projects')}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '0.5rem', 
-              padding: '0.6rem 1.25rem', 
-              background: 'rgba(99, 102, 241, 0.1)', 
-              color: 'var(--primary-accent)', 
-              border: '1px solid rgba(99, 102, 241, 0.2)', 
-              borderRadius: '999px', 
-              fontWeight: '600', 
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.6rem 1.25rem',
+              background: 'rgba(99, 102, 241, 0.1)',
+              color: 'var(--primary-accent)',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+              borderRadius: '999px',
+              fontWeight: '600',
               fontSize: '0.9rem',
               cursor: 'pointer',
               transition: 'all 0.2s ease'
@@ -166,11 +166,11 @@ export default function Messages() {
           </button>
         </div>
 
-        <div className="glass-container dashboard-card" style={{ flex: 1, padding: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '500px' }}>
-          
+        <div className="glass-container " style={{ flex: 1, padding: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '500px' }}>
+
           {/* Chat History Area */}
           <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
+
             {displayedMessages.length === 0 ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                 <p>{!projectId ? "Welcome! You can start a new project by chatting below, or select an existing project." : "No messages yet for this project. Send a message to start a conversation."}</p>
@@ -178,20 +178,20 @@ export default function Messages() {
             ) : (
               displayedMessages.map(msg => (
                 <div key={msg.id} style={{ display: 'flex', gap: '1rem', flexDirection: msg.sender === 'user' ? 'row-reverse' : 'row' }}>
-                  <div style={{ 
+                  <div style={{
                     width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-                    background: msg.sender === 'user' ? 'linear-gradient(135deg, var(--primary-accent) 0%, var(--secondary-accent) 100%)' : 'rgba(99, 102, 241, 0.1)', 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                    color: msg.sender === 'user' ? 'white' : 'var(--primary-accent)' 
+                    background: msg.sender === 'user' ? 'linear-gradient(135deg, var(--primary-accent) 0%, var(--secondary-accent) 100%)' : 'rgba(99, 102, 241, 0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: msg.sender === 'user' ? 'white' : 'var(--primary-accent)'
                   }}>
                     {msg.sender === 'user' ? <User size={20} /> : <Bot size={20} />}
                   </div>
-                  <div style={{ 
-                    background: msg.sender === 'user' ? 'rgba(99, 102, 241, 0.15)' : 'var(--input-bg)', 
-                    border: msg.sender === 'user' ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid var(--input-border)', 
-                    padding: '1rem', 
-                    borderRadius: msg.sender === 'user' ? '12px 0 12px 12px' : '0 12px 12px 12px', 
-                    maxWidth: '80%' 
+                  <div style={{
+                    background: msg.sender === 'user' ? 'rgba(99, 102, 241, 0.15)' : 'var(--input-bg)',
+                    border: msg.sender === 'user' ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid var(--input-border)',
+                    padding: '1rem',
+                    borderRadius: msg.sender === 'user' ? '12px 0 12px 12px' : '0 12px 12px 12px',
+                    maxWidth: '80%'
                   }}>
                     <p style={{ margin: 0, color: 'var(--text-primary)' }}>{msg.text}</p>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'block', textAlign: msg.sender === 'user' ? 'right' : 'left' }}>
@@ -201,139 +201,160 @@ export default function Messages() {
                 </div>
               ))
             )}
-            
+
             {/* Quick Reply Button for Approval */}
-            {displayedMessages.length > 0 && 
-             displayedMessages[displayedMessages.length - 1].sender === 'agent' && 
-             displayedMessages[displayedMessages.length - 1].text.includes('Shall I proceed') && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem' }}>
-                <button 
-                  onClick={() => {
-                    setInputValue("Yes, proceed");
-                    setTimeout(() => {
-                      document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                    }, 50);
-                  }}
-                  style={{
-                    background: 'var(--primary-accent)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '20px',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  Yes, proceed and share
-                </button>
-              </div>
-            )}
+            {displayedMessages.length > 0 &&
+              displayedMessages[displayedMessages.length - 1].sender === 'agent' &&
+              displayedMessages[displayedMessages.length - 1].text.includes('Shall I proceed') && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem' }}>
+                  <button
+                    onClick={() => {
+                      setInputValue("Yes, proceed");
+                      setTimeout(() => {
+                        document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                      }, 50);
+                    }}
+                    style={{
+                      background: 'var(--primary-accent)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Yes, proceed and share
+                  </button>
+                </div>
+              )}
             {/* Quick Reply Button for SRS Approval */}
-            {displayedMessages.length > 0 && 
-             displayedMessages[displayedMessages.length - 1].sender === 'agent' && 
-             (displayedMessages[displayedMessages.length - 1].text.includes('review the summary') ||
-              displayedMessages[displayedMessages.length - 1].text.includes('corrected summary')) && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem' }}>
-                <button 
-                  onClick={() => {
-                    setInputValue("Approve");
-                    setTimeout(() => {
-                      document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                    }, 50);
-                  }}
-                  style={{
-                    background: '#16a34a',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.5rem 1.25rem',
-                    borderRadius: '20px',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
-                  }}
-                >
-                  Approve SRS & Submit
-                </button>
-              </div>
-            )}
-            {/* Quick Reply Button for Proposal Approval */}
-            {displayedMessages.length > 0 && 
-             displayedMessages[displayedMessages.length - 1].sender === 'agent' && 
-             displayedMessages[displayedMessages.length - 1].text.includes('Proposal Review Request') && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem' }}>
-                <button 
-                  onClick={() => {
-                    setInputValue("Approve Proposal");
-                    setTimeout(() => {
-                      document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                    }, 50);
-                  }}
-                  style={{
-                    background: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.5rem 1.25rem',
-                    borderRadius: '20px',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
-                  }}
-                >
-                  Approve Proposal
-                </button>
-              </div>
-            )}
+            {displayedMessages.length > 0 &&
+              displayedMessages[displayedMessages.length - 1].sender === 'agent' &&
+              (displayedMessages[displayedMessages.length - 1].text.includes('review the summary') ||
+                displayedMessages[displayedMessages.length - 1].text.includes('corrected summary')) && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem' }}>
+                  <button
+                    onClick={() => {
+                      setInputValue("Approve");
+                      setTimeout(() => {
+                        document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                      }, 50);
+                    }}
+                    style={{
+                      background: '#16a34a',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
+                    }}
+                  >
+                    Approve SRS & Submit
+                  </button>
+                </div>
+              )}
+            {/* Quick Reply Button for Proposal Approval & Rejection */}
+            {displayedMessages.length > 0 &&
+              displayedMessages[displayedMessages.length - 1].sender === 'agent' &&
+              displayedMessages[displayedMessages.length - 1].text.includes('Proposal Review Request') && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem', gap: '1rem' }}>
+                  <button
+                    onClick={() => {
+                      setInputValue("Approve Proposal");
+                      setTimeout(() => {
+                        document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                      }, 50);
+                    }}
+                    style={{
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                    }}
+                  >
+                    Approve Proposal
+                  </button>
+                  <button
+                    onClick={() => {
+                      setInputValue("Reject Proposal");
+                      setTimeout(() => {
+                        document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                      }, 50);
+                    }}
+                    style={{
+                      background: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)'
+                    }}
+                  >
+                    Reject Proposal
+                  </button>
+                </div>
+              )}
             {/* Typing Indicator */}
             {isTyping && (
               <div style={{ display: 'flex', gap: '1rem', flexDirection: 'row' }}>
-                <div style={{ 
+                <div style={{
                   width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-                  background: 'rgba(99, 102, 241, 0.1)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                  color: 'var(--primary-accent)' 
+                  background: 'rgba(99, 102, 241, 0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--primary-accent)'
                 }}>
                   <Bot size={20} />
                 </div>
-                <div style={{ 
-                  background: 'var(--input-bg)', 
-                  border: '1px solid var(--input-border)', 
-                  padding: '1rem', 
-                  borderRadius: '0 12px 12px 12px', 
+                <div style={{
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--input-border)',
+                  padding: '1rem',
+                  borderRadius: '0 12px 12px 12px',
                   maxWidth: '80%',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.4rem'
                 }}>
-                  <div style={{width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both'}}></div>
-                  <div style={{width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both', animationDelay: '0.2s'}}></div>
-                  <div style={{width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both', animationDelay: '0.4s'}}></div>
+                  <div style={{ width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both' }}></div>
+                  <div style={{ width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both', animationDelay: '0.2s' }}></div>
+                  <div style={{ width: '6px', height: '6px', background: 'var(--text-secondary)', borderRadius: '50%', animation: 'blink 1.4s infinite both', animationDelay: '0.4s' }}></div>
                 </div>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
 
           {/* Chat Input Area */}
           <form onSubmit={handleSendMessage} style={{ padding: '1.5rem', borderTop: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px' }}>
             <div className="input-wrapper" style={{ display: 'flex', gap: '1rem' }}>
-              <input 
-                type="text" 
-                className="form-input" 
+              <input
+                type="text"
+                className="form-input"
                 placeholder="Type your message to the agent..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                style={{ flex: 1, paddingLeft: '1rem' }} 
+                style={{ flex: 1, paddingLeft: '1rem' }}
               />
               <button type="submit" className="btn-primary" style={{ width: 'auto', padding: '0.75rem 1.25rem' }} disabled={!inputValue.trim()}>
                 <Send size={18} />
               </button>
             </div>
           </form>
-          
+
         </div>
       </main>
     </div>
