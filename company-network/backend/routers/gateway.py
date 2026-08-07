@@ -27,17 +27,55 @@ def receive_client_request(
     
     if existing_project:
         # If it exists, we update it
-        update_data = project_payload.model_dump()
+        update_data = project_payload.model_dump(exclude={"reproposal"})
         db.query(models.IncomingProject).filter(
             models.IncomingProject.client_project_id == project_payload.client_project_id
         ).update(update_data)
-        db.commit()
-        db.refresh(existing_project)
-        print(f"[*] Updated existing incoming project {existing_project.id}")
+        
+        if project_payload.reproposal:
+            # Re-proposal request — automatically trigger PM orchestrator and log the detailed SRS summary
+            existing_project.agent_status = "ANALYZING"
+            existing_project.proposal_data = None
+            db.commit()
+            db.refresh(existing_project)
+            
+            # Format and log the detailed requirements summary from Client Agent to PM Agent
+            summary_text = (
+                f"📋 **Updated Re-proposal Requirements Summary**\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🔹 Project Name     : {project_payload.name}\n"
+                f"🔹 Description      : {project_payload.description}\n"
+                f"🔹 Target Platforms : {project_payload.target_platforms}\n"
+                f"🔹 Target Audience  : {project_payload.target_audience}\n"
+                f"🔹 Timeline         : {project_payload.expected_timeline}\n"
+                f"🔹 Budget Range     : {project_payload.budget_range}\n"
+                f"🔹 Key Features     : {project_payload.key_features}\n"
+                f"🔹 Existing Systems : {project_payload.existing_systems}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            )
+            
+            from agents.orchestrator import _save_message
+            _save_message(db, existing_project, "Client Agent", "client", summary_text)
+            _save_message(db, existing_project, "PM Agent", "pm", "🔄 Received re-proposal request with modified requirements. Automatically re-running the AI analysis pipeline.")
+            print(f"[*] Updated existing incoming project {existing_project.id} with re-proposal modifications. Re-running orchestration.")
+            
+            # Re-trigger orchestration automatically!
+            background_tasks.add_task(run_orchestrator, existing_project.id)
+        else:
+            # Reset the status so that the orchestrator knows it is starting a fresh analysis
+            existing_project.agent_status = "PENDING_ANALYSIS"
+            existing_project.proposal_data = None
+            db.commit()
+            db.refresh(existing_project)
+            print(f"[*] Updated existing incoming project {existing_project.id} with modified requirements.")
+            
+            # Re-trigger orchestration automatically!
+            background_tasks.add_task(run_orchestrator, existing_project.id)
+            
         return existing_project
     
     # Otherwise, create a new record
-    new_incoming = models.IncomingProject(**project_payload.model_dump())
+    new_incoming = models.IncomingProject(**project_payload.model_dump(exclude={"reproposal"}))
     db.add(new_incoming)
     db.commit()
     db.refresh(new_incoming)
@@ -177,16 +215,16 @@ def approve_incoming_request_by_client(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    project.agent_status = "APPROVED"
+    project.agent_status = "PENDING_MANAGEMENT_APPROVAL"
     db.commit()
     
     # Save chat messages in the company network agent log showing the A2A communication
     from agents.orchestrator import _save_message
     _save_message(db, project, "Client Agent", "client", "client ok with this report")
-    _save_message(db, project, "PM Agent", "pm", "🎉 The proposal has been officially approved. Initiating project onboarding.")
+    _save_message(db, project, "PM Agent", "pm", "Client is okay with the estimation. If you are okay with it, please click Approve, or click Reject. Alternatively, you can type ok or approve in the chat to approve.")
         
-    print(f"[GATEWAY] Client Project {client_project_id} proposal APPROVED by client")
-    return {"message": "Project status updated to APPROVED"}
+    print(f"[GATEWAY] Client Project {client_project_id} proposal APPROVED by client, waiting for manual management approval.")
+    return {"message": "Project status updated to PENDING_MANAGEMENT_APPROVAL"}
 
 @router.post("/incoming-requests-by-client/{client_project_id}/reject")
 def reject_incoming_request_by_client(
@@ -209,3 +247,156 @@ def reject_incoming_request_by_client(
         
     print(f"[GATEWAY] Client Project {client_project_id} proposal REJECTED by client")
     return {"message": "Project status updated to REJECTED"}
+
+@router.post("/incoming-requests-by-client/{client_project_id}/reproposal")
+def reproposal_incoming_request_by_client(
+    client_project_id: int,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.IncomingProject).filter(
+        models.IncomingProject.client_project_id == client_project_id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.agent_status = "PENDING_ANALYSIS"
+    db.commit()
+    
+    # Save chat messages in the company network agent log showing the A2A communication
+    from agents.orchestrator import _save_message
+    _save_message(db, project, "Client Agent", "client", "client requested modifications and re-proposal")
+    _save_message(db, project, "PM Agent", "pm", "Re-proposal requested. Waiting for updated requirements from Client Agent.")
+        
+    print(f"[GATEWAY] Client Project {client_project_id} re-proposal requested by client")
+    return {"message": "Project status updated to PENDING_ANALYSIS for re-proposal"}
+
+@router.post("/incoming-requests/{project_id}/approve-reproposal")
+def approve_reproposal(
+    project_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.IncomingProject).filter(models.IncomingProject.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.agent_status = "ANALYZING"
+    project.proposal_data = None
+    db.commit()
+
+    from agents.orchestrator import _save_message
+    _save_message(db, project, "PM Agent", "pm", "Approved the modified requirements. Re-running the AI analysis pipeline.")
+
+    background_tasks.add_task(run_orchestrator, project_id)
+    return {"message": "Re-proposal requirements approved. Analysis started."}
+
+@router.post("/incoming-requests/{project_id}/reject-reproposal")
+def reject_reproposal(
+    project_id: int,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.IncomingProject).filter(models.IncomingProject.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.agent_status = "REJECTED"
+    db.commit()
+
+    from agents.orchestrator import _save_message
+    _save_message(db, project, "PM Agent", "pm", "Rejected the modified requirements. Notifying the Client Agent.")
+
+    # Call Client Network reject-reproposal-sync endpoint
+    try:
+        import urllib.request
+        url = f"http://localhost:8001/api/projects/{project.client_project_id}/reject-reproposal-sync"
+        req = urllib.request.Request(url, method="POST")
+        with urllib.request.urlopen(req) as resp:
+            print(f"[GATEWAY] Synced re-proposal rejection to Client Network. Code: {resp.status}")
+    except Exception as e:
+        print(f"[GATEWAY] Failed to sync re-proposal rejection to Client Network: {e}")
+
+    return {"message": "Re-proposal requirements rejected."}
+
+def sync_approved_to_client(client_project_id: int):
+    try:
+        import urllib.request
+        url = f"http://localhost:8001/api/projects/{client_project_id}/management-approved-sync"
+        req = urllib.request.Request(url, method="POST")
+        with urllib.request.urlopen(req) as resp:
+            print(f"[GATEWAY] Synced management approval to Client Network. Code: {resp.status}")
+    except Exception as e:
+        print(f"[GATEWAY] Failed to sync management approval to Client Network: {e}")
+
+def sync_rejected_to_client(client_project_id: int):
+    try:
+        import urllib.request
+        url = f"http://localhost:8001/api/projects/{client_project_id}/management-rejected-sync"
+        req = urllib.request.Request(url, method="POST")
+        with urllib.request.urlopen(req) as resp:
+            print(f"[GATEWAY] Synced management rejection to Client Network. Code: {resp.status}")
+    except Exception as e:
+        print(f"[GATEWAY] Failed to sync management rejection to Client Network: {e}")
+
+@router.post("/incoming-requests/{project_id}/management-approve")
+def management_approve_project(
+    project_id: int,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.IncomingProject).filter(models.IncomingProject.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.agent_status = "APPROVED"
+    db.commit()
+
+    from agents.orchestrator import _save_message
+    _save_message(db, project, "PM Agent", "pm", "🎉 The proposal has been officially approved by management. Initiating project onboarding.")
+
+    sync_approved_to_client(project.client_project_id)
+    return {"message": "Project approved by management"}
+
+@router.post("/incoming-requests/{project_id}/management-reject")
+def management_reject_project(
+    project_id: int,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.IncomingProject).filter(models.IncomingProject.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.agent_status = "REJECTED"
+    db.commit()
+
+    from agents.orchestrator import _save_message
+    _save_message(db, project, "PM Agent", "pm", "❌ The proposal has been rejected by management.")
+
+    sync_rejected_to_client(project.client_project_id)
+    return {"message": "Project rejected by management"}
+
+class MessagePayload(schemas.BaseModel):
+    message: str
+
+@router.post("/incoming-requests/{project_id}/send-message")
+def send_agent_message_from_company(
+    project_id: int,
+    payload: MessagePayload,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.IncomingProject).filter(models.IncomingProject.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    from agents.orchestrator import _save_message
+    # Save the user's message as coming from "PM Agent"
+    _save_message(db, project, "PM Agent", "pm", payload.message)
+
+    # Check if the message is "ok" or "approve" manually typed in chat
+    msg_lower = payload.message.strip().lower().strip("!.,")
+    if msg_lower in ["ok", "approve", "approved", "yes", "confirm", "proceed", "go ahead"]:
+        if project.agent_status == "PENDING_MANAGEMENT_APPROVAL":
+            project.agent_status = "APPROVED"
+            db.commit()
+            _save_message(db, project, "PM Agent", "pm", "🎉 The proposal has been officially approved by management. Initiating project onboarding.")
+            sync_approved_to_client(project.client_project_id)
+
+    return {"message": "Message saved successfully"}

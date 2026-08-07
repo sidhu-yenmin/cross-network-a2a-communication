@@ -24,6 +24,7 @@ class IncomingProjectCreate(BaseModel):
     budget_range: str
     key_features: str
     existing_systems: str
+    reproposal: Optional[bool] = False
 
 class IncomingProjectResponse(BaseModel):
     id: int

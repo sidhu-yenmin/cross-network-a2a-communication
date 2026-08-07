@@ -25,6 +25,8 @@ export default function Messages() {
   const [agentMessages, setAgentMessages] = useState([]);     // from backend (live delegation)
   const [inputValue, setInputValue] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [projectStatus, setProjectStatus] = useState(null);
+  const [incomingId, setIncomingId] = useState(null);
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
 
@@ -47,7 +49,7 @@ export default function Messages() {
         const data = await res.json();
         setAgentMessages(data);
 
-        // If we have agent messages, check if still analyzing
+        // If we have agent messages, check if still analyzing and load management status
         const statuses = await fetch(`http://localhost:8000/api/gateway/incoming-requests`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -56,6 +58,8 @@ export default function Messages() {
           const thisProject = projects.find(p => p.client_project_id === projectId);
           if (thisProject) {
             setIsAnalyzing(thisProject.agent_status === 'ANALYZING');
+            setProjectStatus(thisProject.agent_status);
+            setIncomingId(thisProject.id);
           }
         }
       } catch (e) {
@@ -72,22 +76,32 @@ export default function Messages() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [staticMessages, agentMessages]);
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputValue.trim() || !projectId) return;
-    const newMsg = {
-      id: Date.now().toString(),
-      projectId,
-      sender: 'agent',
-      text: inputValue.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    const updated = [...staticMessages, newMsg];
-    setStaticMessages(updated);
-    const all = JSON.parse(localStorage.getItem('chat_messages') || '[]');
-    const others = all.filter(m => m.projectId !== projectId);
-    localStorage.setItem('chat_messages', JSON.stringify([...others, ...updated]));
-    setInputValue('');
+    if (!inputValue.trim() || !projectId || !incomingId) return;
+    try {
+      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${incomingId}/send-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ message: inputValue.trim() })
+      });
+      if (response.ok) {
+        setInputValue('');
+        // Refresh agent messages immediately
+        const res = await fetch(`http://localhost:8000/api/gateway/agent-messages/${projectId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAgentMessages(data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
 
   if (!token) return null;
@@ -223,6 +237,57 @@ export default function Messages() {
           )}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Management Approval Action Panel */}
+        {projectStatus === 'PENDING_MANAGEMENT_APPROVAL' && (
+          <div style={{ display: 'flex', gap: '1rem', padding: '1rem 1.5rem', background: 'rgba(79, 70, 229, 0.1)', borderTop: '1px solid rgba(79, 70, 229, 0.3)', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: '600' }}>
+              Client approved estimation. Manage request:
+            </span>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${incomingId}/management-approve`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                      setProjectStatus('APPROVED');
+                    }
+                  } catch (e) {
+                    alert('Error: ' + e.message);
+                  }
+                }}
+                className="btn-success"
+                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+              >
+                Approve Proposal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${incomingId}/management-reject`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                      setProjectStatus('REJECTED');
+                    }
+                  } catch (e) {
+                    alert('Error: ' + e.message);
+                  }
+                }}
+                className="btn-danger"
+                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', background: '#ef4444', color: 'white', border: 'none' }}
+              >
+                Reject Proposal
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Input */}
         <form onSubmit={handleSendMessage} style={{ padding: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' }}>

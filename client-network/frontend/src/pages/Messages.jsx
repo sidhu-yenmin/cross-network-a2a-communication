@@ -14,6 +14,32 @@ export default function Messages() {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const [projectStatus, setProjectStatus] = useState(null);
+
+  useEffect(() => {
+    if (!token || !projectId) {
+      setProjectStatus(null);
+      return;
+    }
+    const fetchProjectStatus = async () => {
+      try {
+        const res = await fetch(`http://localhost:8001/api/projects/${projectId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setProjectStatus(data.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch project status:', err);
+      }
+    };
+    fetchProjectStatus();
+    
+    // Poll the status every 5 seconds so that when the PM Agent approves/rejects, the UI updates!
+    const interval = setInterval(fetchProjectStatus, 5000);
+    return () => clearInterval(interval);
+  }, [token, projectId, messages]);
 
   useEffect(() => {
     // Load messages from backend DB (source of truth), fall back to localStorage
@@ -305,6 +331,27 @@ export default function Messages() {
                   >
                     Reject Proposal
                   </button>
+                  <button
+                    onClick={() => {
+                      setInputValue("Re-proposal");
+                      setTimeout(() => {
+                        document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                      }, 50);
+                    }}
+                    style={{
+                      background: '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+                    }}
+                  >
+                    Re-proposal
+                  </button>
                 </div>
               )}
             {/* Typing Indicator */}
@@ -344,12 +391,28 @@ export default function Messages() {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Type your message to the agent..."
+                placeholder={
+                  projectStatus === 'SUBMITTED'
+                    ? "Specialist AI agents are re-analyzing the updated requirements. Please wait..."
+                    : projectStatus === 'PENDING_MANAGEMENT_APPROVAL'
+                    ? "Awaiting Company Network management's final approval..."
+                    : "Type your message to the agent..."
+                }
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 style={{ flex: 1, paddingLeft: '1rem' }}
+                disabled={projectStatus === 'SUBMITTED' || projectStatus === 'PENDING_MANAGEMENT_APPROVAL'}
               />
-              <button type="submit" className="btn-primary" style={{ width: 'auto', padding: '0.75rem 1.25rem' }} disabled={!inputValue.trim()}>
+              <button
+                type="submit"
+                className="btn-primary"
+                style={{ width: 'auto', padding: '0.75rem 1.25rem' }}
+                disabled={
+                  !inputValue.trim() ||
+                  projectStatus === 'SUBMITTED' ||
+                  projectStatus === 'PENDING_MANAGEMENT_APPROVAL'
+                }
+              >
                 <Send size={18} />
               </button>
             </div>

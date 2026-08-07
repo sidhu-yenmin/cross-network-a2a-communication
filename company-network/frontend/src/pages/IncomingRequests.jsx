@@ -11,7 +11,7 @@ export default function IncomingRequests() {
   const [error, setError] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState(location.state?.defaultTab || 'Analyse');
+  const [filterStatus, setFilterStatus] = useState(location.state?.defaultTab || 'All');
   const { token } = useAuth();
 
   useEffect(() => {
@@ -115,6 +115,58 @@ export default function IncomingRequests() {
     }
   };
 
+  const handleApproveReproposal = async (projectId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/approve-reproposal`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to approve re-proposal');
+      }
+
+      // Update local state to reflect ANALYZING
+      setRequests(requests.map(req =>
+        req.id === projectId ? { ...req, agent_status: 'ANALYZING' } : req
+      ));
+
+      if (selectedRequest && selectedRequest.id === projectId) {
+        setSelectedRequest({ ...selectedRequest, agent_status: 'ANALYZING' });
+      }
+    } catch (err) {
+      alert(`Error approving re-proposal: ${err.message}`);
+    }
+  };
+
+  const handleRejectReproposal = async (projectId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/reject-reproposal`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to reject re-proposal');
+      }
+
+      // Update local state to reflect REJECTED
+      setRequests(requests.map(req =>
+        req.id === projectId ? { ...req, agent_status: 'REJECTED' } : req
+      ));
+
+      if (selectedRequest && selectedRequest.id === projectId) {
+        setSelectedRequest({ ...selectedRequest, agent_status: 'REJECTED' });
+      }
+    } catch (err) {
+      alert(`Error rejecting re-proposal: ${err.message}`);
+    }
+  };
+
   const handleOpenChat = (request) => {
     const existingMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
     const hasMessagesForProject = existingMessages.some(msg => msg.projectId === request.client_project_id);
@@ -168,6 +220,10 @@ export default function IncomingRequests() {
       case 'ANALYZING': return 'badge-orange';
       case 'PAUSED': return 'badge-amber';
       case 'PROPOSAL_GENERATED': return 'badge-green';
+      case 'REPROPOSAL_REQUESTED': return 'badge-orange';
+      case 'PENDING_MANAGEMENT_APPROVAL': return 'badge-amber';
+      case 'APPROVED': return 'badge-green';
+      case 'REJECTED': return 'badge-red';
       default: return 'badge-orange';
     }
   };
@@ -177,6 +233,10 @@ export default function IncomingRequests() {
     switch (status) {
       case 'PROPOSAL_GENERATED': return 'APPROVED';
       case 'PAUSED': return 'PAUSED';
+      case 'REPROPOSAL_REQUESTED': return 'RE-PROPOSAL REQUESTED';
+      case 'PENDING_MANAGEMENT_APPROVAL': return 'PENDING PM APPROVAL';
+      case 'APPROVED': return 'APPROVED';
+      case 'REJECTED': return 'REJECTED';
       default: return status;
     }
   };
@@ -192,6 +252,68 @@ export default function IncomingRequests() {
           >
             <Play size={16} /> Assign to AI
           </button>
+        );
+      case 'REPROPOSAL_REQUESTED':
+        return (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              className="btn-success"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+              onClick={() => handleApproveReproposal(request.id)}
+            >
+              Approve Re-proposal
+            </button>
+            <button
+              className="btn-danger"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#ef4444', color: 'white', border: 'none' }}
+              onClick={() => handleRejectReproposal(request.id)}
+            >
+              Reject Re-proposal
+            </button>
+          </div>
+        );
+      case 'PENDING_MANAGEMENT_APPROVAL':
+        return (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              className="btn-success"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+              onClick={async () => {
+                try {
+                  const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${request.id}/management-approve`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  if (res.ok) {
+                    setRequests(requests.map(req => req.id === request.id ? { ...req, agent_status: 'APPROVED' } : req));
+                  }
+                } catch (e) {
+                  alert(e.message);
+                }
+              }}
+            >
+              Approve
+            </button>
+            <button
+              className="btn-danger"
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#ef4444', color: 'white', border: 'none' }}
+              onClick={async () => {
+                try {
+                  const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${request.id}/management-reject`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  if (res.ok) {
+                    setRequests(requests.map(req => req.id === request.id ? { ...req, agent_status: 'REJECTED' } : req));
+                  }
+                } catch (e) {
+                  alert(e.message);
+                }
+              }}
+            >
+              Reject
+            </button>
+          </div>
         );
       case 'ANALYZING':
         return (
@@ -211,6 +333,14 @@ export default function IncomingRequests() {
             <RotateCcw size={16} /> Resume
           </button>
         );
+      case 'APPROVED':
+        return (
+          <span style={{ color: 'var(--success-color)', fontWeight: '600', fontSize: '0.9rem' }}>Approved</span>
+        );
+      case 'REJECTED':
+        return (
+          <span style={{ color: 'var(--danger-color)', fontWeight: '600', fontSize: '0.9rem' }}>Rejected</span>
+        );
       default:
         return (
           <button className="btn-primary" disabled>
@@ -227,9 +357,9 @@ export default function IncomingRequests() {
     
     if (filterStatus === 'All') return matchesSearch;
     if (filterStatus === 'Analyse') return matchesSearch && (request.agent_status === 'ANALYZING' || request.agent_status === 'PAUSED');
-    if (filterStatus === 'Pending') return matchesSearch && request.agent_status === 'PENDING_ANALYSIS';
+    if (filterStatus === 'Pending') return matchesSearch && (request.agent_status === 'PENDING_ANALYSIS' || request.agent_status === 'PENDING_MANAGEMENT_APPROVAL');
     if (filterStatus === 'Paused') return matchesSearch && request.agent_status === 'PAUSED';
-    if (filterStatus === 'Approved') return matchesSearch && request.agent_status === 'PROPOSAL_GENERATED';
+    if (filterStatus === 'Approved') return matchesSearch && (request.agent_status === 'PROPOSAL_GENERATED' || request.agent_status === 'APPROVED');
     if (filterStatus === 'Rejected') return matchesSearch && request.agent_status === 'REJECTED';
     
     return matchesSearch;

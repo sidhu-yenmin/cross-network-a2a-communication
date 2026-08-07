@@ -6,17 +6,22 @@ import models, schemas, database, dependencies
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
-def transmit_to_company_network(project: models.Project):
+def transmit_to_company_network(project: models.Project, reproposal: bool = False):
+    description_text = project.description or "Not specified"
+    if project.project_type or project.ui_ux_design:
+        description_text += f"\n\n[Project Type]: {project.project_type or 'Not specified'}\n[UI/UX Design]: {project.ui_ux_design or 'Not specified'}"
+        
     payload = {
         "client_project_id": project.id,
         "name": project.name,
-        "description": project.description,
+        "description": description_text,
         "target_platforms": project.target_platforms or "Not specified",
         "target_audience": project.target_audience or "Not specified",
         "expected_timeline": project.expected_timeline or "Not specified",
         "budget_range": project.budget_range or "Not specified",
         "key_features": project.key_features or "Not specified",
-        "existing_systems": project.existing_systems or "Not specified"
+        "existing_systems": project.existing_systems or "Not specified",
+        "reproposal": reproposal
     }
     try:
         data = json.dumps(payload).encode()
@@ -26,7 +31,7 @@ def transmit_to_company_network(project: models.Project):
             headers={'Content-Type': 'application/json'}
         )
         with urllib.request.urlopen(req) as response:
-            print(f"[A2A TRANSMIT] Successfully sent project {project.id} to Company Network. Response: {response.read().decode()}")
+            print(f"[A2A TRANSMIT] Successfully sent project {project.id} (reproposal={reproposal}) to Company Network. Response: {response.read().decode()}")
     except Exception as e:
         print(f"[A2A TRANSMIT] Failed to transmit project {project.id} to Company Network: {e}")
 
@@ -64,6 +69,20 @@ def get_projects(
 ):
     projects = db.query(models.Project).filter(models.Project.user_id == current_user.id).all()
     return projects
+
+@router.get("/{project_id}", response_model=schemas.ProjectResponse)
+def get_project_by_id(
+    project_id: int,
+    current_user: models.User = Depends(dependencies.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.Project).filter(
+        models.Project.id == project_id,
+        models.Project.user_id == current_user.id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
 
 @router.put("/{project_id}", response_model=schemas.ProjectResponse)
 def update_project(
@@ -178,6 +197,95 @@ def receive_proposal_from_company(
     print(f"[*] Successfully saved proposal chat message for client project {project_id}")
     return {"message": "Proposal received and client notified"}
 
+@router.post("/{project_id}/reject-reproposal-sync")
+def reject_reproposal_sync(
+    project_id: int,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.status = "REJECTED"
+    db.commit()
+
+    report_text = (
+        "❌ **Message from Client Representative Agent**:\n"
+        "Our re-proposal request with the updated requirements has been **REJECTED** by the PM Agent. "
+        "The project status has been updated to Rejected."
+    )
+
+    msg = models.ChatMessageRecord(
+        user_id=project.user_id,
+        project_id=project.id,
+        sender="agent",
+        text=report_text
+    )
+    db.add(msg)
+    db.commit()
+
+    print(f"[*] Successfully saved re-proposal rejection sync for client project {project_id}")
+    return {"message": "Re-proposal rejection sync received and client notified"}
+
+@router.post("/{project_id}/management-approved-sync")
+def management_approved_sync(
+    project_id: int,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.status = "APPROVED"
+    db.commit()
+
+    report_text = (
+        "🎉 **Message from Client Representative Agent**:\n"
+        "Company Network management has officially **APPROVED** the proposal. "
+        "The project is now officially approved and onboarding is initiated!"
+    )
+
+    msg = models.ChatMessageRecord(
+        user_id=project.user_id,
+        project_id=project.id,
+        sender="agent",
+        text=report_text
+    )
+    db.add(msg)
+    db.commit()
+
+    print(f"[*] Successfully saved management approval sync for client project {project_id}")
+    return {"message": "Management approval sync received and client notified"}
+
+@router.post("/{project_id}/management-rejected-sync")
+def management_rejected_sync(
+    project_id: int,
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.status = "REJECTED"
+    db.commit()
+
+    report_text = (
+        "❌ **Message from Client Representative Agent**:\n"
+        "Company Network management has **REJECTED** the proposal."
+    )
+
+    msg = models.ChatMessageRecord(
+        user_id=project.user_id,
+        project_id=project.id,
+        sender="agent",
+        text=report_text
+    )
+    db.add(msg)
+    db.commit()
+
+    print(f"[*] Successfully saved management rejection sync for client project {project_id}")
+    return {"message": "Management rejection sync received and client notified"}
+
 
 
 
@@ -278,32 +386,33 @@ def chat_with_agent(
         # Check if project exists and status is NEGOTIATING
         if project and project.status == "NEGOTIATING":
             msg_lower = chat_request.message.strip().lower().strip("!.,")
-            approval_phrases = [
-                "ok", "approve", "approved", "looks good", "yes", "proceed", "correct", 
-                "fine", "agree", "go ahead", "confirm", "yes, proceed", "yes proceed", 
-                "looks good to me", "that's correct", "perfect", "ok proceed", "ok approve",
-                "approve proposal", "accept", "accept proposal"
-            ]
-            is_approval = any(phrase == msg_lower or (phrase in msg_lower and len(msg_lower) < len(phrase) + 5) for phrase in approval_phrases)
-            has_change_keywords = any(kw in msg_lower for kw in ["change", "modify", "update", "correct to", "instead", "but", "edit", "reject", "not ok", "not okay", "no", "incorrect"])
             
-            if is_approval and not has_change_keywords:
-                # Approve the proposal!
-                project.status = "APPROVED"
+            # 1. Check if user requested Re-proposal
+            reproposal_phrases = ["reproposal", "re-proposal", "re proposal", "request re-proposal"]
+            is_reproposal = any(phrase in msg_lower for phrase in reproposal_phrases)
+            
+            if is_reproposal:
+                # Set status back to REPROPOSAL_ELICITATION so requirements are gathered via LLM chat
+                project.status = "REPROPOSAL_ELICITATION"
                 db.commit()
                 db.refresh(project)
                 
-                # Make cross-network POST call to Company Network to approve the proposal there
+                # Make cross-network POST call to Company Network to reset the proposal status there
                 try:
                     import urllib.request
-                    url = f"http://localhost:8000/api/gateway/incoming-requests-by-client/{project.id}/approve"
+                    url = f"http://localhost:8000/api/gateway/incoming-requests-by-client/{project.id}/reproposal"
                     req = urllib.request.Request(url, method="POST")
                     with urllib.request.urlopen(req) as resp:
-                        print(f"[*] Company Network proposal marked APPROVED. Code: {resp.status}")
+                        print(f"[*] Company Network proposal marked for RE-PROPOSAL. Code: {resp.status}")
                 except Exception as e:
-                    print(f"[*] Failed to sync proposal approval to Company Network: {e}")
+                    print(f"[*] Failed to sync re-proposal request to Company Network: {e}")
 
-                reply_text = "Thank you! The proposal has been successfully approved. We will proceed with the project setup and contact you shortly with the next steps."
+                reply_text = (
+                    "Understood. I have initiated a re-proposal request with the company network. "
+                    "The requirements are now unlocked. Please let me know what changes or modifications "
+                    "you would like to make (e.g., to the budget, timeline, platforms, features, etc.), "
+                    "and I will help you update them!"
+                )
                 
                 # Save the agent's reply
                 agent_msg_record = models.ChatMessageRecord(
@@ -317,7 +426,51 @@ def chat_with_agent(
                 
                 return {
                     "reply": reply_text,
-                    "is_complete": True,
+                    "is_complete": False,
+                    "project_id": project.id
+                }
+
+            # 2. Check for Approval
+            approval_phrases = [
+                "ok", "approve", "approved", "looks good", "yes", "proceed", "correct", 
+                "fine", "agree", "go ahead", "confirm", "yes, proceed", "yes proceed", 
+                "looks good to me", "that's correct", "perfect", "ok proceed", "ok approve",
+                "approve proposal", "accept", "accept proposal"
+            ]
+            is_approval = any(phrase == msg_lower or (phrase in msg_lower and len(msg_lower) < len(phrase) + 5) for phrase in approval_phrases)
+            has_change_keywords = any(kw in msg_lower for kw in ["change", "modify", "update", "correct to", "instead", "but", "edit", "reject", "not ok", "not okay", "no", "incorrect"])
+            
+            if is_approval and not has_change_keywords:
+                # Set status to PENDING_MANAGEMENT_APPROVAL and notify company network
+                project.status = "PENDING_MANAGEMENT_APPROVAL"
+                db.commit()
+                db.refresh(project)
+                
+                # Make cross-network POST call to Company Network to approve the proposal there
+                try:
+                    import urllib.request
+                    url = f"http://localhost:8000/api/gateway/incoming-requests-by-client/{project.id}/approve"
+                    req = urllib.request.Request(url, method="POST")
+                    with urllib.request.urlopen(req) as resp:
+                        print(f"[*] Company Network proposal marked APPROVED by client. Code: {resp.status}")
+                except Exception as e:
+                    print(f"[*] Failed to sync proposal approval to Company Network: {e}")
+
+                reply_text = "Thank you! I have transmitted your approval to the Company Network. Awaiting their management's final approval."
+                
+                # Save the agent's reply
+                agent_msg_record = models.ChatMessageRecord(
+                    user_id=current_user.id,
+                    project_id=project.id,
+                    sender="agent",
+                    text=reply_text
+                )
+                db.add(agent_msg_record)
+                db.commit()
+                
+                return {
+                    "reply": reply_text,
+                    "is_complete": False,
                     "project_id": project.id
                 }
             else:
@@ -362,18 +515,41 @@ def chat_with_agent(
         ).order_by(models.ChatMessageRecord.timestamp.asc()).all()
         history_dicts = [{"sender": m.sender, "text": m.text} for m in db_history]
         
-        system_prompt = (
-            "You are a friendly and professional Project Requirement Assistant. "
-            "Your ONLY goal is to interactively chat with the client and gather software project requirements. "
-            "Be concise, polite, and ask one clear question at a time to uncover missing details like project name, description, project type (e.g. e-commerce, healthcare, CRM), UI/UX design preferences, budget, timeline, target audience, key features, and existing systems. "
-            "IMPORTANT: If the client corrects or updates any previously provided information (e.g. budget, timeline, features), "
-            "always accept the correction gracefully. Say something like 'Got it, I have updated that.' and continue with the next question. Never argue, challenge, or dismiss corrections. "
-            "Once you have gathered ALL necessary details (project name, description, project type, UI/UX design, target platforms, target audience, expected timeline, budget range, key features, and existing systems), "
-            "mark the conversation as complete internally by setting is_complete to True. Your reply should be a natural confirmation like 'Thank you! I have all the details I need. Let me compile the requirements summary for your approval.' "
-            "IMPORTANT: NEVER include internal field names, JSON keys, or technical instructions (like 'is_complete', 'set to true', etc.) in your reply to the client. Your reply must always be natural, human-readable text. "
-            "ABSOLUTE RULE: Under no circumstances should you answer questions, provide information, or chat about topics completely unrelated to the project (e.g., general knowledge, casual chat, math, code). "
-            "If the user says anything completely unrelated, politely redirect: 'I appreciate the conversation! However, I am here to help with your project requirements. Could we continue with that?'"
-        )
+        if project and project.status in ["REPROPOSAL_ELICITATION", "AWAITING_APPROVAL"]:
+            system_prompt = (
+                "You are a friendly and professional Project Requirement Assistant in Requirement Modification Mode.\n"
+                "The client has already submitted all requirements and is now making modifications or requesting changes to the requirements.\n"
+                "Your task is to:\n"
+                "1. Accept the client's modifications/changes gracefully (e.g. changes to budget, timeline, key features, etc.).\n"
+                "2. Update the corresponding fields (e.g. budget_range, expected_timeline, key_features, etc.) in your JSON output.\n"
+                "3. Set is_complete to True immediately in this turn so that the updated requirements summary can be compiled and shown to the user.\n"
+                "4. In your reply, briefly explain what you updated, and end with: 'Here are the changes:' (e.g. 'I have updated the budget to 100,000. Here are the changes:')\n"
+                "Do not ask further questions. Set is_complete to True."
+            )
+        else:
+            system_prompt = (
+                "You are a friendly and professional Project Requirement Assistant. "
+                "Your ONLY goal is to interactively chat with the client and gather software project requirements. "
+                "Be concise, polite, and ask one clear question at a time to uncover missing details. "
+                "You MUST gather the following 10 details from the client before you can finish:\n"
+                "1. Project Name\n"
+                "2. Description (what the software does)\n"
+                "3. Project Type (e.g. e-commerce, CRM, mobile app, etc.)\n"
+                "4. UI/UX Design Preferences (e.g. modern, dark theme, minimalist)\n"
+                "5. Target Platforms (e.g. Web, iOS, Android)\n"
+                "6. Target Audience (who will use it)\n"
+                "7. Expected Timeline (e.g. 3 months, 6 months) - MANDATORY\n"
+                "8. Budget Range (e.g. $10k-$20k) - MANDATORY\n"
+                "9. Key Features (list of main features)\n"
+                "10. Existing Systems to integrate with (e.g. payment gateway, legacy database)\n\n"
+                "CRITICAL INSTRUCTION: You MUST ask for the Expected Timeline and the Budget Range. Do NOT skip them. If they are not specified in the conversation history, you MUST ask for them explicitly in your next turns. Do NOT set is_complete to True if Expected Timeline or Budget Range is still missing or not discussed.\n\n"
+                "IMPORTANT: If the client corrects or updates any previously provided information (e.g. budget, timeline, features), "
+                "always accept the correction gracefully. Say something like 'Got it, I have updated that.' and continue with the next question. Never argue, challenge, or dismiss corrections.\n"
+                "Once you have gathered ALL 10 details, mark the conversation as complete internally by setting is_complete to True. Your reply should be a natural confirmation like 'Thank you! I have all the details I need. Let me compile the requirements summary for your approval.'\n"
+                "IMPORTANT: NEVER include internal field names, JSON keys, or technical instructions (like 'is_complete', 'set to true', etc.) in your reply to the client. Your reply must always be natural, human-readable text.\n"
+                "ABSOLUTE RULE: Under no circumstances should you answer questions, provide information, or chat about topics completely unrelated to the project (e.g., general knowledge, casual chat, math, code). "
+                "If the user says anything completely unrelated, politely redirect: 'I appreciate the conversation! However, I am here to help with your project requirements. Could we continue with that?'"
+            )
         
         # Get structured response from LLM
         response = llm_client.generate_chat_response(
@@ -388,6 +564,7 @@ def chat_with_agent(
         # If the LLM has decided requirements are complete
         if response.is_complete:
             is_corrected = project is not None
+            is_reproposal_elicitation = project is not None and project.status == "REPROPOSAL_ELICITATION"
             
             if project:
                 # Update existing project
@@ -401,10 +578,15 @@ def chat_with_agent(
                 project.existing_systems = response.existing_systems or project.existing_systems
                 project.project_type = response.project_type or project.project_type
                 project.ui_ux_design = response.ui_ux_design or project.ui_ux_design
-                project.status = "AWAITING_APPROVAL"
+                
+                if is_reproposal_elicitation:
+                    project.status = "SUBMITTED"
+                else:
+                    project.status = "AWAITING_APPROVAL"
+                    
                 db.commit()
                 db.refresh(project)
-                print(f"[*] Updated existing project {project.id} with extracted requirements (Awaiting Approval).")
+                print(f"[*] Updated existing project {project.id} with extracted requirements (status: {project.status}).")
             else:
                 # Create a new project
                 project = models.Project(
@@ -428,7 +610,10 @@ def chat_with_agent(
                 print(f"[*] Created new project {project.id} from chat (Awaiting Approval).")
 
             # Generate the SRS summary in the requested format
-            title = "📋 Corrected Project Requirements Summary" if is_corrected else "📋 Project Requirements Summary"
+            if is_reproposal_elicitation:
+                title = "📋 Updated Re-proposal Requirements Summary"
+            else:
+                title = "📋 Corrected Project Requirements Summary" if is_corrected else "📋 Project Requirements Summary"
             
             srs_text = (
                 f"{title}\n"
@@ -448,11 +633,19 @@ def chat_with_agent(
                 f"━━━━━━━━━━━━━━━━━"
             )
             
-            reply_text = (
-                f"{srs_text}\n\n"
-                f"Please review the summary above. If it looks correct, reply with **Approve** or **OK** "
-                f"to submit this project to the Company Network. If you'd like to change anything, just let me know!"
-            )
+            if is_reproposal_elicitation:
+                reply_text = (
+                    f"{srs_text}\n\n"
+                    f"I have transmitted the updated requirements to the PM Agent. The specialist AI agents are now re-analyzing the project. I will let you know once the new proposal is ready!"
+                )
+                # Automatically trigger transmission to company network as a reproposal request
+                background_tasks.add_task(transmit_to_company_network, project, True)
+            else:
+                reply_text = (
+                    f"{srs_text}\n\n"
+                    f"Please review the summary above. If it looks correct, reply with **Approve** or **OK** "
+                    f"to submit this project to the Company Network. If you'd like to change anything, just let me know!"
+                )
             
         final_project_id = project.id if project else project_id
 
