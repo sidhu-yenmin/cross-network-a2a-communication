@@ -7,6 +7,7 @@ import models, schemas, database, dependencies
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 def transmit_to_company_network(project: models.Project, reproposal: bool = False):
+    from a2a_client import a2a_client
     description_text = project.description or "Not specified"
     if project.project_type or project.ui_ux_design:
         description_text += f"\n\n[Project Type]: {project.project_type or 'Not specified'}\n[UI/UX Design]: {project.ui_ux_design or 'Not specified'}"
@@ -24,16 +25,14 @@ def transmit_to_company_network(project: models.Project, reproposal: bool = Fals
         "reproposal": reproposal
     }
     try:
-        data = json.dumps(payload).encode()
-        req = urllib.request.Request(
-            'http://localhost:8000/api/gateway/receive-request', 
-            data=data, 
-            headers={'Content-Type': 'application/json'}
-        )
-        with urllib.request.urlopen(req) as response:
-            print(f"[A2A TRANSMIT] Successfully sent project {project.id} (reproposal={reproposal}) to Company Network. Response: {response.read().decode()}")
+        a2a_client.send_message_sync({
+            "target_network": "company-network",
+            "message_type": "REQUIREMENT_SUBMISSION",
+            "payload": payload
+        })
+        print(f"[A2A TRANSMIT] Successfully queued project {project.id} (reproposal={reproposal}) for Company Network.")
     except Exception as e:
-        print(f"[A2A TRANSMIT] Failed to transmit project {project.id} to Company Network: {e}")
+        print(f"[A2A TRANSMIT] Failed to queue project {project.id} to Company Network: {e}")
 
 @router.post("/", response_model=schemas.ProjectResponse)
 def create_project(
@@ -124,7 +123,7 @@ def transmit_project(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         
-    background_tasks.add_task(transmit_to_company_network, project)
+    transmit_to_company_network(project)
     return {"message": "Project transmission to Company Network initiated."}
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -363,7 +362,7 @@ def chat_with_agent(
                 db.refresh(project)
                 
                 # Trigger background transmission
-                background_tasks.add_task(transmit_to_company_network, project)
+                transmit_to_company_network(project)
                 
                 reply_text = "Thank you! The project requirements have been approved and successfully transmitted to the Company Network. Our team is now generating the final proposal."
                 
@@ -397,13 +396,15 @@ def chat_with_agent(
                 db.commit()
                 db.refresh(project)
                 
-                # Make cross-network POST call to Company Network to reset the proposal status there
+                # Make WebSocket call to Company Network to reset the proposal status there
                 try:
-                    import urllib.request
-                    url = f"http://localhost:8000/api/gateway/incoming-requests-by-client/{project.id}/reproposal"
-                    req = urllib.request.Request(url, method="POST")
-                    with urllib.request.urlopen(req) as resp:
-                        print(f"[*] Company Network proposal marked for RE-PROPOSAL. Code: {resp.status}")
+                    from a2a_client import a2a_client
+                    a2a_client.send_message_sync({
+                        "target_network": "company-network",
+                        "message_type": "REPROPOSAL_REQUEST",
+                        "client_project_id": project.id
+                    })
+                    print(f"[*] Company Network proposal marked for RE-PROPOSAL.")
                 except Exception as e:
                     print(f"[*] Failed to sync re-proposal request to Company Network: {e}")
 
@@ -446,13 +447,15 @@ def chat_with_agent(
                 db.commit()
                 db.refresh(project)
                 
-                # Make cross-network POST call to Company Network to approve the proposal there
+                # Make WebSocket call to Company Network to approve the proposal there
                 try:
-                    import urllib.request
-                    url = f"http://localhost:8000/api/gateway/incoming-requests-by-client/{project.id}/approve"
-                    req = urllib.request.Request(url, method="POST")
-                    with urllib.request.urlopen(req) as resp:
-                        print(f"[*] Company Network proposal marked APPROVED by client. Code: {resp.status}")
+                    from a2a_client import a2a_client
+                    a2a_client.send_message_sync({
+                        "target_network": "company-network",
+                        "message_type": "PROPOSAL_APPROVAL",
+                        "client_project_id": project.id
+                    })
+                    print(f"[*] Company Network proposal marked APPROVED by client.")
                 except Exception as e:
                     print(f"[*] Failed to sync proposal approval to Company Network: {e}")
 
@@ -479,13 +482,15 @@ def chat_with_agent(
                 project.status = "NEGOTIATING"
                 db.commit()
                 
-                # Make cross-network POST call to Company Network to reject/suggest changes to the proposal
+                # Make WebSocket call to Company Network to reject/suggest changes to the proposal
                 try:
-                    import urllib.request
-                    url = f"http://localhost:8000/api/gateway/incoming-requests-by-client/{project.id}/reject"
-                    req = urllib.request.Request(url, method="POST")
-                    with urllib.request.urlopen(req) as resp:
-                        print(f"[*] Company Network proposal marked REJECTED (suggestions logged). Code: {resp.status}")
+                    from a2a_client import a2a_client
+                    a2a_client.send_message_sync({
+                        "target_network": "company-network",
+                        "message_type": "PROPOSAL_REJECTION",
+                        "client_project_id": project.id
+                    })
+                    print(f"[*] Company Network proposal marked REJECTED (suggestions logged).")
                 except Exception as e:
                     print(f"[*] Failed to sync proposal rejection to Company Network: {e}")
 
@@ -639,7 +644,7 @@ def chat_with_agent(
                     f"I have transmitted the updated requirements to the PM Agent. The specialist AI agents are now re-analyzing the project. I will let you know once the new proposal is ready!"
                 )
                 # Automatically trigger transmission to company network as a reproposal request
-                background_tasks.add_task(transmit_to_company_network, project, True)
+                transmit_to_company_network(project, True)
             else:
                 reply_text = (
                     f"{srs_text}\n\n"
@@ -676,3 +681,100 @@ def chat_with_agent(
     except Exception as e:
         print(f"Error in chat endpoint: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+from fastapi import WebSocket, WebSocketDisconnect, Query
+import jwt
+import auth_utils
+
+@router.websocket("/ws/chat")
+async def websocket_chat_endpoint(
+    websocket: WebSocket,
+    token: str = Query(...),
+    project_id: Optional[int] = Query(None),
+):
+    await websocket.accept()
+    
+    db = database.SessionLocal()
+    try:
+        import urllib.parse
+        token = urllib.parse.unquote(token)
+        payload = jwt.decode(token, auth_utils.SECRET_KEY, algorithms=[auth_utils.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            print("WS Error: Email is None in token")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+            
+        current_user = db.query(models.User).filter(models.User.email == email).first()
+        if current_user is None:
+            print("WS Error: User not found")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+            
+        if project_id:
+            project = db.query(models.Project).filter(
+                models.Project.id == project_id, 
+                models.Project.user_id == current_user.id
+            ).first()
+            if not project:
+                print("WS Error: Project not found")
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
+
+        try:
+            while True:
+                data = await websocket.receive_text()
+                try:
+                    chat_data = json.loads(data)
+                    message_text = chat_data.get("message")
+                    if not message_text:
+                        continue
+                        
+                    chat_request = schemas.ChatRequest(message=message_text)
+                    
+                    def thread_task(req, p_id, user_email):
+                        local_db = database.SessionLocal()
+                        try:
+                            user = local_db.query(models.User).filter(models.User.email == user_email).first()
+                            return chat_with_agent(
+                                chat_request=req,
+                                project_id=p_id,
+                                current_user=user,
+                                db=local_db
+                            )
+                        finally:
+                            local_db.close()
+
+                    import asyncio
+                    loop = asyncio.get_running_loop()
+                    response_dict = await loop.run_in_executor(
+                        None,
+                        thread_task,
+                        chat_request,
+                        project_id,
+                        email
+                    )
+                    
+                    if response_dict.get("project_id"):
+                        project_id = response_dict.get("project_id")
+                        
+                    await websocket.send_text(json.dumps(response_dict))
+                except json.JSONDecodeError:
+                    await websocket.send_text(json.dumps({"error": "Invalid JSON"}))
+                except Exception as e:
+                    import traceback
+                    with open("ws_error_log.txt", "w") as f:
+                        f.write(traceback.format_exc())
+                    print(f"Error inside WS loop: {e}")
+                    await websocket.send_text(json.dumps({"error": str(e)}))
+        except WebSocketDisconnect:
+            print("Client disconnected from chat WebSocket")
+    except jwt.PyJWTError as e:
+        with open("ws_error_log.txt", "a") as f: f.write(f"JWT Error: {e}\n")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+    except Exception as e:
+        import traceback
+        with open("ws_error_log.txt", "a") as f: f.write(f"Outer WS Error: {traceback.format_exc()}\n")
+        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+    finally:
+        db.close()

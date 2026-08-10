@@ -11,7 +11,7 @@ export default function ProposalHistory() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/gateway/incoming-requests', {
+        const response = await fetch('http://localhost:8002/api/gateway/incoming-requests', {
           headers: {
             'Authorization': `Bearer ${token}`
           }

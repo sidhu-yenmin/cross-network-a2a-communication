@@ -15,6 +15,66 @@ export default function Messages() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const [projectStatus, setProjectStatus] = useState(null);
+  const [ws, setWs] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const queryParam = projectId ? `&project_id=${projectId}` : '';
+    const encodedToken = encodeURIComponent(token);
+    const socket = new WebSocket(`ws://localhost:8001/api/projects/ws/chat?token=${encodedToken}${queryParam}`);
+    
+    socket.onopen = () => console.log("Chat WebSocket connected");
+    
+    socket.onmessage = (event) => {
+      setIsTyping(false);
+      try {
+        const data = JSON.parse(event.data);
+        if (data.error) {
+          console.error("WS error:", data.error);
+          return;
+        }
+        
+        if (data.project_id && data.project_id !== projectId) {
+          navigate(`/messages?projectId=${data.project_id}`, { replace: true });
+          setMessages(prev => {
+            const updated = prev.map(m => m.projectId === null ? { ...m, projectId: data.project_id } : m);
+            localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(updated));
+            return updated;
+          });
+        }
+        
+        const replyMsg = {
+          id: Date.now().toString() + "-agent",
+          projectId: data.project_id || projectId,
+          sender: 'agent',
+          text: data.reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => {
+          const newUpdated = [...prev, replyMsg];
+          localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(newUpdated));
+          return newUpdated;
+        });
+      } catch (err) {
+        console.error("Failed to parse WS message", err);
+      }
+    };
+    
+    socket.onerror = (err) => {
+      console.error("Chat WebSocket error:", err);
+      setIsTyping(false);
+    };
+    
+    socket.onclose = () => {
+      console.log("Chat WebSocket closed");
+      setIsTyping(false);
+    };
+    
+    setWs(socket);
+    
+    return () => socket.close();
+  }, [token, projectId, navigate, userId]);
 
   useEffect(() => {
     if (!token || !projectId) {
@@ -100,59 +160,12 @@ export default function Messages() {
     localStorage.setItem(storageKey, JSON.stringify(updatedMessages));
     setInputValue('');
 
-    // Call backend API for real interactive LLM chat
-    if (token) {
-      // Get the history just for this project (or null if direct chat)
-      const history = messages
-        .filter(m => m.projectId === projectId)
-        .map(m => ({ sender: m.sender, text: m.text }));
-
-      const queryParam = projectId ? `?project_id=${projectId}` : '';
-
+    // Call backend API via WebSocket
+    if (ws && ws.readyState === WebSocket.OPEN) {
       setIsTyping(true);
-      fetch(`http://localhost:8001/api/projects/chat${queryParam}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          message: newMsg.text,
-          history: history
-        })
-      })
-        .then(res => {
-          if (!res.ok) throw new Error("API response was not ok");
-          return res.json();
-        })
-        .then(data => {
-          // If a new project was created by the agent, update the URL
-          if (data.project_id && data.project_id !== projectId) {
-            navigate(`/messages?projectId=${data.project_id}`, { replace: true });
-            // Update the messages that had null projectId to the new one
-            setMessages(prev => {
-              const updated = prev.map(m => m.projectId === null ? { ...m, projectId: data.project_id } : m);
-              localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(updated));
-              return updated;
-            });
-          }
-
-          const replyMsg = {
-            id: Date.now().toString() + "-agent",
-            projectId: data.project_id || projectId,
-            sender: 'agent',
-            text: data.reply,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-          setMessages(prev => {
-            const newUpdated = [...prev, replyMsg];
-            localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(newUpdated));
-            return newUpdated;
-          });
-
-        })
-        .catch(err => console.error("Failed to get chat response:", err))
-        .finally(() => setIsTyping(false));
+      ws.send(JSON.stringify({ message: newMsg.text }));
+    } else {
+      console.error("WebSocket is not connected");
     }
   };
 

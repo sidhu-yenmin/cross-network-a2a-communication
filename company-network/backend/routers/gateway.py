@@ -305,13 +305,15 @@ def reject_reproposal(
     from agents.orchestrator import _save_message
     _save_message(db, project, "PM Agent", "pm", "Rejected the modified requirements. Notifying the Client Agent.")
 
-    # Call Client Network reject-reproposal-sync endpoint
+    # Call Client Network reject-reproposal-sync via WebSocket
     try:
-        import urllib.request
-        url = f"http://localhost:8001/api/projects/{project.client_project_id}/reject-reproposal-sync"
-        req = urllib.request.Request(url, method="POST")
-        with urllib.request.urlopen(req) as resp:
-            print(f"[GATEWAY] Synced re-proposal rejection to Client Network. Code: {resp.status}")
+        from a2a_client import a2a_client
+        a2a_client.send_message_sync({
+            "target_network": "client-network",
+            "message_type": "REJECT_REPROPOSAL_SYNC",
+            "client_project_id": project.client_project_id
+        })
+        print(f"[GATEWAY] Synced re-proposal rejection to Client Network.")
     except Exception as e:
         print(f"[GATEWAY] Failed to sync re-proposal rejection to Client Network: {e}")
 
@@ -319,21 +321,25 @@ def reject_reproposal(
 
 def sync_approved_to_client(client_project_id: int):
     try:
-        import urllib.request
-        url = f"http://localhost:8001/api/projects/{client_project_id}/management-approved-sync"
-        req = urllib.request.Request(url, method="POST")
-        with urllib.request.urlopen(req) as resp:
-            print(f"[GATEWAY] Synced management approval to Client Network. Code: {resp.status}")
+        from a2a_client import a2a_client
+        a2a_client.send_message_sync({
+            "target_network": "client-network",
+            "message_type": "MANAGEMENT_APPROVED_SYNC",
+            "client_project_id": client_project_id
+        })
+        print(f"[GATEWAY] Synced management approval to Client Network.")
     except Exception as e:
         print(f"[GATEWAY] Failed to sync management approval to Client Network: {e}")
 
 def sync_rejected_to_client(client_project_id: int):
     try:
-        import urllib.request
-        url = f"http://localhost:8001/api/projects/{client_project_id}/management-rejected-sync"
-        req = urllib.request.Request(url, method="POST")
-        with urllib.request.urlopen(req) as resp:
-            print(f"[GATEWAY] Synced management rejection to Client Network. Code: {resp.status}")
+        from a2a_client import a2a_client
+        a2a_client.send_message_sync({
+            "target_network": "client-network",
+            "message_type": "MANAGEMENT_REJECTED_SYNC",
+            "client_project_id": client_project_id
+        })
+        print(f"[GATEWAY] Synced management rejection to Client Network.")
     except Exception as e:
         print(f"[GATEWAY] Failed to sync management rejection to Client Network: {e}")
 

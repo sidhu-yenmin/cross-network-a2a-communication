@@ -8,9 +8,10 @@ db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:Yenmin%40123@loca
 try:
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
-    cur.execute("ALTER TABLE users ADD COLUMN mobile_number VARCHAR;")
+    cur.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_type VARCHAR;")
+    cur.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ui_ux_design VARCHAR;")
     conn.commit()
-    print("Column added successfully.")
+    print("Columns added successfully.")
 except Exception as e:
     print("Error:", e)
 finally:

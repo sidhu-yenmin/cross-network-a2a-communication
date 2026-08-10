@@ -42,7 +42,7 @@ export default function Messages() {
 
     const fetchAgentMessages = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/gateway/agent-messages/${projectId}`, {
+        const res = await fetch(`http://localhost:8002/api/gateway/agent-messages/${projectId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) return;
@@ -50,7 +50,7 @@ export default function Messages() {
         setAgentMessages(data);
 
         // If we have agent messages, check if still analyzing and load management status
-        const statuses = await fetch(`http://localhost:8000/api/gateway/incoming-requests`, {
+        const statuses = await fetch(`http://localhost:8002/api/gateway/incoming-requests`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (statuses.ok) {
@@ -80,7 +80,7 @@ export default function Messages() {
     e.preventDefault();
     if (!inputValue.trim() || !projectId || !incomingId) return;
     try {
-      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${incomingId}/send-message`, {
+      const response = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${incomingId}/send-message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ export default function Messages() {
       if (response.ok) {
         setInputValue('');
         // Refresh agent messages immediately
-        const res = await fetch(`http://localhost:8000/api/gateway/agent-messages/${projectId}`, {
+        const res = await fetch(`http://localhost:8002/api/gateway/agent-messages/${projectId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -249,7 +249,7 @@ export default function Messages() {
                 type="button"
                 onClick={async () => {
                   try {
-                    const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${incomingId}/management-approve`, {
+                    const res = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${incomingId}/management-approve`, {
                       method: 'POST',
                       headers: { Authorization: `Bearer ${token}` }
                     });
@@ -269,7 +269,7 @@ export default function Messages() {
                 type="button"
                 onClick={async () => {
                   try {
-                    const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${incomingId}/management-reject`, {
+                    const res = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${incomingId}/management-reject`, {
                       method: 'POST',
                       headers: { Authorization: `Bearer ${token}` }
                     });

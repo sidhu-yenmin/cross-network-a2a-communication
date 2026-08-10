@@ -17,7 +17,7 @@ export default function IncomingRequests() {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/gateway/incoming-requests', {
+        const response = await fetch('http://localhost:8002/api/gateway/incoming-requests', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -36,7 +36,7 @@ export default function IncomingRequests() {
 
   const handleAssignToAI = async (projectId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/assign-ai`, {
+      const response = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${projectId}/assign-ai`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -63,7 +63,7 @@ export default function IncomingRequests() {
 
   const handlePauseProject = async (projectId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/pause`, {
+      const response = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${projectId}/pause`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -90,7 +90,7 @@ export default function IncomingRequests() {
 
   const handleResumeProject = async (projectId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/resume`, {
+      const response = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${projectId}/resume`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -117,7 +117,7 @@ export default function IncomingRequests() {
 
   const handleApproveReproposal = async (projectId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/approve-reproposal`, {
+      const response = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${projectId}/approve-reproposal`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -143,7 +143,7 @@ export default function IncomingRequests() {
 
   const handleRejectReproposal = async (projectId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${projectId}/reject-reproposal`, {
+      const response = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${projectId}/reject-reproposal`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -280,7 +280,7 @@ export default function IncomingRequests() {
               style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
               onClick={async () => {
                 try {
-                  const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${request.id}/management-approve`, {
+                  const res = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${request.id}/management-approve`, {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${token}` }
                   });
@@ -299,7 +299,7 @@ export default function IncomingRequests() {
               style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#ef4444', color: 'white', border: 'none' }}
               onClick={async () => {
                 try {
-                  const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${request.id}/management-reject`, {
+                  const res = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${request.id}/management-reject`, {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${token}` }
                   });

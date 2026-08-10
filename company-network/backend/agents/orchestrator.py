@@ -312,7 +312,7 @@ class AgentOrchestrator:
 
         # Transmit back to Client Network to list/show the reports to the client agent
         try:
-            import urllib.request
+            from a2a_client import a2a_client
             client_payload = {
                 "project_name": project.name,
                 "ba_analysis": ba_analysis,
@@ -322,15 +322,13 @@ class AgentOrchestrator:
                 "risk_analysis": risk_analysis,
                 "client_agent_report": client_report
             }
-            data_bytes = json.dumps(client_payload).encode("utf-8")
-            url = f"http://localhost:8001/api/projects/{project.client_project_id}/receive-proposal"
-            req = urllib.request.Request(
-                url,
-                data=data_bytes,
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req) as resp:
-                print(f"[ORCHESTRATOR] Successfully transmitted proposal back to Client Network. Code: {resp.status}")
+            a2a_client.send_message_sync({
+                "target_network": "client-network",
+                "message_type": "PROPOSAL_GENERATED",
+                "client_project_id": project.client_project_id,
+                "payload": client_payload
+            })
+            print(f"[ORCHESTRATOR] Successfully transmitted proposal back to Client Network via WebSocket.")
         except Exception as e:
             print(f"[ORCHESTRATOR] Failed to transmit proposal back to Client Network: {e}")
 

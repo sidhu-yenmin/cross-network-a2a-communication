@@ -22,7 +22,18 @@ print("[DEBUG] Starting create_all...")
 Base.metadata.create_all(bind=engine)
 print("[DEBUG] Finished create_all.")
 
-app = FastAPI(title="Company Network Backend API")
+from contextlib import asynccontextmanager
+import asyncio
+from a2a_client import a2a_client
+from a2a_handlers import handle_incoming_a2a_message
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    a2a_client.add_handler(handle_incoming_a2a_message)
+    asyncio.create_task(a2a_client.connect())
+    yield
+
+app = FastAPI(title="Company Network Backend API", lifespan=lifespan)
 print("[DEBUG] FastAPI app initialized.")
 
 # Setup CORS

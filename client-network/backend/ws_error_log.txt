@@ -1,0 +1,43 @@
+Traceback (most recent call last):
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\routers\projects.py", line 560, in chat_with_agent
+    response = llm_client.generate_chat_response(
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\agents\core\llm_provider.py", line 73, in generate_chat_response
+    response = structured_llm.invoke(messages)
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\langchain_core\runnables\base.py", line 3442, in invoke
+    input_ = context.run(step.invoke, input_, config, **kwargs)
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\langchain_core\runnables\base.py", line 6002, in invoke
+    return self.bound.invoke(
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\langchain_core\language_models\chat_models.py", line 476, in invoke
+    self.generate_prompt(
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\langchain_core\language_models\chat_models.py", line 1849, in generate_prompt
+    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\langchain_core\language_models\chat_models.py", line 1656, in generate
+    self._generate_with_cache(
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\langchain_core\language_models\chat_models.py", line 1994, in _generate_with_cache
+    result = self._generate(
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\langchain_openai\chat_models\base.py", line 1747, in _generate
+    _handle_openai_api_error(e)
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\langchain_openai\chat_models\base.py", line 1719, in _generate
+    self.root_client.chat.completions.with_raw_response.parse(**payload)
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\openai\_legacy_response.py", line 369, in wrapped
+    return cast(LegacyAPIResponse[R], func(*args, **kwargs))
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\openai\resources\chat\completions\completions.py", line 193, in parse
+    return self._post(
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\openai\_base_client.py", line 1375, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\venv\lib\site-packages\openai\_base_client.py", line 1148, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.NotFoundError: Error code: 404
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\routers\projects.py", line 750, in websocket_chat_endpoint
+    response_dict = await loop.run_in_executor(
+  File "C:\Users\admin-07\AppData\Local\Programs\Python\Python310\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\routers\projects.py", line 739, in thread_task
+    return chat_with_agent(
+  File "D:\POC\cross-network-a2a-communication\client-network\backend\routers\projects.py", line 683, in chat_with_agent
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+fastapi.exceptions.HTTPException: 500: Error code: 404

@@ -148,7 +148,7 @@ export default function RequirementAnalysis() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/gateway/incoming-requests', {
+        const response = await fetch('http://localhost:8002/api/gateway/incoming-requests', {
           headers: {
             'Authorization': `Bearer ${token}`
           }

@@ -217,7 +217,7 @@ const ProposalAccordion = ({ project, defaultOpen = false }) => {
                     <button 
                       onClick={async () => {
                         try {
-                          const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${project.id}/management-approve`, {
+                          const res = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${project.id}/management-approve`, {
                             method: 'POST',
                             headers: { Authorization: `Bearer ${token}` }
                           });
@@ -236,7 +236,7 @@ const ProposalAccordion = ({ project, defaultOpen = false }) => {
                     <button 
                       onClick={async () => {
                         try {
-                          const res = await fetch(`http://localhost:8000/api/gateway/incoming-requests/${project.id}/management-reject`, {
+                          const res = await fetch(`http://localhost:8002/api/gateway/incoming-requests/${project.id}/management-reject`, {
                             method: 'POST',
                             headers: { Authorization: `Bearer ${token}` }
                           });
@@ -285,7 +285,7 @@ export default function ProposalApproval() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/gateway/incoming-requests', {
+        const response = await fetch('http://localhost:8002/api/gateway/incoming-requests', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
