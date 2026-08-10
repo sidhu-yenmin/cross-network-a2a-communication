@@ -51,6 +51,11 @@ def receive_client_request(
                 f"🔹 Budget Range     : {project_payload.budget_range}\n"
                 f"🔹 Key Features     : {project_payload.key_features}\n"
                 f"🔹 Existing Systems : {project_payload.existing_systems}\n"
+                f" \n"
+                f"[Technical Approach]: {project_payload.tech_approach}\n"
+                f"[Frontend Tech]     : {project_payload.tech_frontend}\n"
+                f"[Backend Tech]      : {project_payload.tech_backend}\n"
+                f"[Database Tech]     : {project_payload.tech_database}\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             
@@ -94,6 +99,19 @@ def get_incoming_requests(
 ):
     requests = db.query(models.IncomingProject).order_by(models.IncomingProject.created_at.desc()).all()
     return requests
+
+@router.get("/incoming-requests/by-client/{client_project_id}", response_model=schemas.IncomingProjectResponse)
+def get_incoming_request_by_client(
+    client_project_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    project = db.query(models.IncomingProject).filter(
+        models.IncomingProject.client_project_id == client_project_id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
 
 def run_orchestrator(project_id: int):
     """Run the agent orchestrator in a background thread with pause support."""

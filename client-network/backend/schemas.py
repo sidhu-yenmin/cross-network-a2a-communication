@@ -45,6 +45,10 @@ class ProjectCreate(BaseModel):
     existing_systems: str = Field(..., min_length=1, description="Existing systems to integrate with")
     project_type: Optional[str] = Field(default=None, description="Type of project")
     ui_ux_design: Optional[str] = Field(default=None, description="UI/UX design details")
+    tech_approach: Optional[str] = Field(default=None, description="Technical approach or architecture")
+    tech_frontend: Optional[str] = Field(default=None, description="Frontend technology or framework")
+    tech_backend: Optional[str] = Field(default=None, description="Backend technology or framework")
+    tech_database: Optional[str] = Field(default=None, description="Database technology")
 
 class ProjectResponse(BaseModel):
     id: int
@@ -59,6 +63,10 @@ class ProjectResponse(BaseModel):
     existing_systems: str | None
     project_type: str | None = None
     ui_ux_design: str | None = None
+    tech_approach: str | None = None
+    tech_frontend: str | None = None
+    tech_backend: str | None = None
+    tech_database: str | None = None
     status: str
     created_at: datetime
 

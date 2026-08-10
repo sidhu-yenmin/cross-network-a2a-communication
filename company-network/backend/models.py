@@ -23,6 +23,10 @@ class IncomingProject(Base):
     budget_range = Column(String, nullable=True)
     key_features = Column(String, nullable=True)
     existing_systems = Column(String, nullable=True)
+    tech_approach = Column(String, nullable=True)
+    tech_frontend = Column(String, nullable=True)
+    tech_backend = Column(String, nullable=True)
+    tech_database = Column(String, nullable=True)
 
     agent_status = Column(String, default="PENDING_ANALYSIS")
     proposal_data = Column(JSON, nullable=True)

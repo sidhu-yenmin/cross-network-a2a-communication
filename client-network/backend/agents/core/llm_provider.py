@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class AgentChatResponse(BaseModel):
     reply: str = Field(description="MANDATORY. Your conversational reply to the client. This field MUST always contain a non-empty string. If is_complete is true, write a brief confirmation message. If gathering info, ask the next question. NEVER leave this blank.")
-    is_complete: bool = Field(description="Set to true ONLY if you have gathered ALL necessary information (name, description, project type, UI/UX design, target platforms, target audience, expected timeline, budget range, key features, existing systems) and are ready to finalize.")
+    is_complete: bool = Field(description="Set to true ONLY if you have gathered ALL necessary information (name, description, project type, UI/UX design, target platforms, target audience, expected timeline, budget range, key features, existing systems, tech_approach, tech_frontend, tech_backend, tech_database) and are ready to finalize.")
     project_name: str = Field(default="", description="The name of the project")
     description: str = Field(default="", description="Detailed requirements of the project")
     target_platforms: str = Field(default="", description="Target platforms (e.g., Web, iOS, Android)")
@@ -18,6 +18,10 @@ class AgentChatResponse(BaseModel):
     existing_systems: str = Field(default="", description="Existing systems to integrate with")
     project_type: str = Field(default="", description="The type of project (e.g., E-commerce, Healthcare, CRM, etc.)")
     ui_ux_design: str = Field(default="", description="The UI/UX design requirements or preferences")
+    tech_approach: str = Field(default="", description="Technical approach/architecture preference (e.g. microservices, monolith, serverless, etc. or 'Not specified' if left to suggestion)")
+    tech_frontend: str = Field(default="", description="Frontend technology preference (e.g. React, Vue, Flutter, React Native, etc. or 'Not specified' if left to suggestion)")
+    tech_backend: str = Field(default="", description="Backend technology preference (e.g. Node.js, FastAPI, Django, Spring Boot, etc. or 'Not specified' if left to suggestion)")
+    tech_database: str = Field(default="", description="Database preference (e.g. PostgreSQL, MongoDB, MySQL, etc. or 'Not specified' if left to suggestion)")
 
 class LLMClient:
     def __init__(self, config_path: str = "config.json"):
@@ -82,15 +86,13 @@ class LLMClient:
             fallback_prompt = (
                 system_prompt + "\n\n"
                 "RULES FOR YOUR REPLY:\n"
-                "1. If the client's message is NOT related to software project requirements "
-                "(e.g. general chat, jokes, math, weather, news, unrelated questions), "
-                "reply EXACTLY with: "
-                "'I'm sorry, I can only assist with gathering your software project requirements. "
-                "Please tell me more about the project you'd like to build.'\n"
-                "2. If the message IS about their software project, briefly acknowledge it "
-                "and ask the single most important missing detail "
-                "(budget, timeline, target audience, key features, or existing systems). "
-                "Keep your reply to 1-2 sentences.\n\n"
+                "1. If the client's message is completely unrelated to software projects "
+                "(e.g. general knowledge questions, jokes, math, weather), "
+                "politely redirect: 'I'm sorry, I can only assist with gathering your software project requirements. Could we continue with that?'\n"
+                "2. Otherwise (including greetings like 'hi' or affirmations like 'ok' or 'k'), briefly acknowledge the user "
+                "and ask a clear, specific question to gather one of the missing requirements "
+                "(e.g. project name, description, type, platforms, timeline, budget, features). "
+                "Your reply MUST end with a question mark (?) asking for a project requirement.\n\n"
                 f"Client said: \"{message}\"\n"
                 "Your reply (plain text only — no JSON, no role labels like 'assistant:'):"
             )

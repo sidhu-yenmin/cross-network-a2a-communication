@@ -36,40 +36,43 @@ export default function Messages() {
     setStaticMessages(saved.filter(m => m.projectId === projectId));
   }, [projectId]);
 
-  // Poll backend for live agent messages
+  // Fetch messages and project status, only polling if status is active (ANALYZING/PENDING_ANALYSIS)
   useEffect(() => {
     if (!projectId || !token) return;
 
-    const fetchAgentMessages = async () => {
+    const fetchStatusAndMessages = async () => {
       try {
+        // 1. Fetch agent messages
         const res = await fetch(`http://localhost:8000/api/gateway/agent-messages/${projectId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!res.ok) return;
-        const data = await res.json();
-        setAgentMessages(data);
+        if (res.ok) {
+          const data = await res.json();
+          setAgentMessages(data);
+        }
 
-        // If we have agent messages, check if still analyzing and load management status
-        const statuses = await fetch(`http://localhost:8000/api/gateway/incoming-requests`, {
+        // 2. Fetch project status
+        const statusRes = await fetch(`http://localhost:8000/api/gateway/incoming-requests/by-client/${projectId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (statuses.ok) {
-          const projects = await statuses.json();
-          const thisProject = projects.find(p => p.client_project_id === projectId);
-          if (thisProject) {
-            setIsAnalyzing(thisProject.agent_status === 'ANALYZING');
-            setProjectStatus(thisProject.agent_status);
-            setIncomingId(thisProject.id);
-          }
+        if (statusRes.ok) {
+          const thisProject = await statusRes.json();
+          setIsAnalyzing(thisProject.agent_status === 'ANALYZING');
+          setProjectStatus(thisProject.agent_status);
+          setIncomingId(thisProject.id);
         }
       } catch (e) {
-        console.error('Agent message poll error:', e);
+        console.error('Fetch error:', e);
       }
     };
 
-    fetchAgentMessages();
-    pollRef.current = setInterval(fetchAgentMessages, 4000); // poll every 4s
-    return () => clearInterval(pollRef.current);
+    fetchStatusAndMessages();
+
+    const intervalId = setInterval(fetchStatusAndMessages, 4000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
   }, [projectId, token]);
 
   useEffect(() => {

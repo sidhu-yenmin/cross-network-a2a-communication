@@ -247,10 +247,10 @@ class AgentOrchestrator:
             },
             "technical_design": {
                 "full_analysis": tech_analysis,
-                "architecture": "Microservices-based cloud architecture",
-                "frontend": f"React Native / Flutter for {project.target_platforms}",
-                "backend": "Python/FastAPI with REST & WebSocket APIs",
-                "database": "PostgreSQL + Redis caching"
+                "architecture": project.tech_approach if (hasattr(project, 'tech_approach') and project.tech_approach and project.tech_approach.lower() != "not specified") else "Microservices-based cloud architecture",
+                "frontend": project.tech_frontend if (hasattr(project, 'tech_frontend') and project.tech_frontend and project.tech_frontend.lower() != "not specified") else f"React Native / Flutter for {project.target_platforms}",
+                "backend": project.tech_backend if (hasattr(project, 'tech_backend') and project.tech_backend and project.tech_backend.lower() != "not specified") else "Python/FastAPI with REST & WebSocket APIs",
+                "database": project.tech_database if (hasattr(project, 'tech_database') and project.tech_database and project.tech_database.lower() != "not specified") else "PostgreSQL + Redis caching"
             },
             "financial_estimate": {
                 "full_analysis": cost_analysis,

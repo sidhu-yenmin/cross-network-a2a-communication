@@ -24,6 +24,10 @@ class IncomingProjectCreate(BaseModel):
     budget_range: str
     key_features: str
     existing_systems: str
+    tech_approach: Optional[str] = "Not specified"
+    tech_frontend: Optional[str] = "Not specified"
+    tech_backend: Optional[str] = "Not specified"
+    tech_database: Optional[str] = "Not specified"
     reproposal: Optional[bool] = False
 
 class IncomingProjectResponse(BaseModel):
@@ -37,6 +41,10 @@ class IncomingProjectResponse(BaseModel):
     budget_range: str
     key_features: str
     existing_systems: str
+    tech_approach: Optional[str] = "Not specified"
+    tech_frontend: Optional[str] = "Not specified"
+    tech_backend: Optional[str] = "Not specified"
+    tech_database: Optional[str] = "Not specified"
     agent_status: str
     proposal_data: Optional[Dict] = None
     created_at: datetime

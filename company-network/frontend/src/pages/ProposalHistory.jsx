@@ -8,6 +8,32 @@ export default function ProposalHistory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const formatBudget = (val) => {
+    if (!val) return 'N/A';
+    let str = val.trim();
+    
+    // Determine currency
+    const lower = str.toLowerCase();
+    let currencySymbol = '₹'; // Default to INR ₹
+    if (lower.includes('$') || lower.includes('dollar') || lower.includes('usd')) {
+      currencySymbol = '$';
+    }
+    
+    // Strip currency terms/symbols
+    str = str.replace(/(inr|rs\.?|usd|\$|₹|rupees?|dollars?)/gi, '');
+    
+    // Strip unrelated noise words
+    str = str.replace(/(people|client|user|for|range)/gi, '');
+    
+    // Strip greater than / less than characters
+    str = str.replace(/[><]/g, '');
+    
+    // Strip leading/trailing whitespaces, dashes, commas
+    str = str.trim().replace(/^[:\s,-]+|[:\s,-]+$/g, '');
+    
+    return `${currencySymbol}${str}`;
+  };
+
   useEffect(() => {
     const fetchHistory = async () => {
       try {
@@ -79,7 +105,7 @@ export default function ProposalHistory() {
                 <tr key={prop.id} className="hover:bg-gray-50 transition-colors cursor-pointer group">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
-                      <div className="bg-indigo-50 p-2 rounded text-indigo-600">
+                       <div className="bg-indigo-50 p-2 rounded text-indigo-600">
                         <FileCheck size={18} />
                       </div>
                       <span className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
@@ -89,7 +115,7 @@ export default function ProposalHistory() {
                   </td>
                   <td className="py-4 px-6 text-gray-600">{prop.client_project_id}</td>
                   <td className="py-4 px-6 text-gray-500">{new Date(prop.created_at).toLocaleDateString()}</td>
-                  <td className="py-4 px-6 font-medium text-gray-900">{prop.budget_range || 'N/A'}</td>
+                  <td className="py-4 px-6 font-medium text-gray-900">{formatBudget(prop.budget_range)}</td>
                   <td className="py-4 px-6">
                     {prop.agent_status === 'APPROVED' && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">

@@ -31,6 +31,10 @@ class Project(Base):
     existing_systems = Column(String, nullable=True)
     project_type = Column(String, nullable=True)
     ui_ux_design = Column(String, nullable=True)
+    tech_approach = Column(String, nullable=True)
+    tech_frontend = Column(String, nullable=True)
+    tech_backend = Column(String, nullable=True)
+    tech_database = Column(String, nullable=True)
 
     status = Column(String, default="SUBMITTED")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -75,6 +75,10 @@ export default function Messages() {
       }
     };
     loadMessages();
+
+    // Poll chat history every 4 seconds to sync incoming proposals, SRS notifications, and messages in real time!
+    const interval = setInterval(loadMessages, 4000);
+    return () => clearInterval(interval);
   }, [token, userId]);
 
   useEffect(() => {
@@ -259,7 +263,8 @@ export default function Messages() {
             {displayedMessages.length > 0 &&
               displayedMessages[displayedMessages.length - 1].sender === 'agent' &&
               (displayedMessages[displayedMessages.length - 1].text.includes('review the summary') ||
-                displayedMessages[displayedMessages.length - 1].text.includes('corrected summary')) && (
+                displayedMessages[displayedMessages.length - 1].text.includes('corrected summary') ||
+                displayedMessages[displayedMessages.length - 1].text.includes('updated summary')) && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '3.5rem', marginTop: '-0.5rem' }}>
                   <button
                     onClick={() => {

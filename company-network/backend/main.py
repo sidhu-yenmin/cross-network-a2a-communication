@@ -22,6 +22,16 @@ print("[DEBUG] Starting create_all...")
 Base.metadata.create_all(bind=engine)
 print("[DEBUG] Finished create_all.")
 
+# Dynamically alter table to add columns if they are missing
+for col in ["tech_approach", "tech_frontend", "tech_backend", "tech_database"]:
+    try:
+        with engine.connect() as conn:
+            from sqlalchemy import text
+            conn.execute(text(f"ALTER TABLE incoming_projects ADD COLUMN {col} TEXT"))
+            conn.commit()
+    except Exception:
+        pass
+
 app = FastAPI(title="Company Network Backend API")
 print("[DEBUG] FastAPI app initialized.")
 
